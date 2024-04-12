@@ -631,7 +631,7 @@ int getenv_int(const char *name, int default_value = 0);
 // Reads an integer from user environment. Takes a var name without
 // prefix and checks both supported variants - with "ONEDNN_" (primary) and
 // "DNNL_" (secondary) prefixes.
-int getenv_int_user(const char *name, int default_value = 0);
+int DNNL_API getenv_int_user(const char *name, int default_value = 0);
 // Reads a string literal from user environment. Takes a var name without
 // prefix and checks both supported variants - with "ONEDNN_" (primary) and
 // "DNNL_" (secondary) prefixes.

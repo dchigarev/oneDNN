@@ -21,7 +21,7 @@ namespace impl {
 namespace graph {
 namespace utils {
 
-std::atomic<id_t::value_type> id_t::counter {100000};
+std::atomic<id_t::value_type> id_t::counter DNNL_API {100000};
 
 } // namespace utils
 } // namespace graph

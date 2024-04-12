@@ -102,7 +102,7 @@ std::shared_ptr<consumer_t> consumer(pb_node_t *p_node, iport_t i_t);
 
 std::shared_ptr<consumer_t> producer(pb_node_t *p_node, oport_t o_t);
 
-std::shared_ptr<in_edge_t> in_edge(iport_t i_t, pb_node_t *p_node, oport_t o_t);
+std::shared_ptr<in_edge_t> DNNL_API in_edge(iport_t i_t, pb_node_t *p_node, oport_t o_t);
 
 // Helper function for op kind check
 decision_function kind(dnnl::impl::graph::op_kind_t okind);
@@ -119,7 +119,7 @@ class pb_op_t : public pb_node_t {
 public:
     pb_op_t() = delete;
     // like is_commutative by callback
-    bool append_decision_function(const decision_function &p_fn);
+    bool DNNL_API append_decision_function(const decision_function &p_fn);
 
     // For overriding default side output control
     void allow_external_outputs() { accept_external_outputs_ = true; }
@@ -284,35 +284,35 @@ public:
             dnnl::impl::graph::op_kind_t p_kind, const in_edges_t &p_in_edges);
     pb_op_t *append_op(dnnl::impl::graph::op_kind_t p_kind);
 
-    pb_op_t *append_alternation(
+    pb_op_t DNNL_API *append_alternation(
             const std::vector<dnnl::impl::graph::op_kind_t> &p_kind,
             const in_edges_t &p_in_edges);
-    pb_op_t *append_alternation(
+    pb_op_t DNNL_API *append_alternation(
             const std::vector<dnnl::impl::graph::op_kind_t> &p_kind);
 
-    alternation_t *append_alternation(
+    alternation_t DNNL_API *append_alternation(
             const std::vector<std::shared_ptr<pb_graph_t>> &p_nodes,
             const in_edges_t &p_in_edges);
-    alternation_t *append_alternation(
+    alternation_t DNNL_API *append_alternation(
             const std::vector<std::shared_ptr<pb_graph_t>> &p_nodes);
 
-    repetition_t *append_repetition(const std::shared_ptr<pb_graph_t> &p_node,
+    repetition_t DNNL_API *append_repetition(const std::shared_ptr<pb_graph_t> &p_node,
             const port_map &p_map, size_t min_rep, size_t max_rep,
             const in_edges_t &p_in_edges);
-    repetition_t *append_repetition(const std::shared_ptr<pb_graph_t> &p_node,
+    repetition_t DNNL_API *append_repetition(const std::shared_ptr<pb_graph_t> &p_node,
             const port_map &p_map, size_t min_rep, size_t max_rep);
 
-    repetition_t *append_optional(const std::shared_ptr<pb_graph_t> &p_node,
+    repetition_t DNNL_API *append_optional(const std::shared_ptr<pb_graph_t> &p_node,
             const in_edges_t &p_in_edges);
-    repetition_t *append_optional(const std::shared_ptr<pb_graph_t> &p_node);
+    repetition_t DNNL_API *append_optional(const std::shared_ptr<pb_graph_t> &p_node);
 
     std::vector<std::pair<iport_t, consumers_t>> get_inner_consumers();
     std::vector<std::pair<oport_t, producer_t>> get_inner_producers();
     std::shared_ptr<consumers_t> get_inner_consumer(iport_t);
     std::shared_ptr<producer_t> get_inner_producer(oport_t);
 
-    bool create_input_port(iport_t, pb_node_t *, iport_t);
-    bool create_output_port(oport_t, pb_node_t *, oport_t);
+    bool DNNL_API create_input_port(iport_t, pb_node_t *, iport_t);
+    bool DNNL_API create_output_port(oport_t, pb_node_t *, oport_t);
 
     std::vector<pb_node_t *> get_nodes();
 
@@ -328,8 +328,8 @@ protected:
             const std::shared_ptr<producer_t> &);
     bool connect_edges(pb_node_t *p_node, const in_edges_t &p_in_edges);
 
-    bool create_input_port(iport_t, const std::shared_ptr<consumer_t> &);
-    bool create_output_port(oport_t, std::shared_ptr<producer_t>);
+    bool DNNL_API create_input_port(iport_t, const std::shared_ptr<consumer_t> &);
+    bool DNNL_API create_output_port(oport_t, std::shared_ptr<producer_t>);
 
     // Reference to all internal pb_nodes
     std::vector<std::shared_ptr<pb_node_t>> nodes_;

@@ -39,7 +39,7 @@ const runtime_scales_t &default_runtime_scale() {
     return default_runtime_scale_instance;
 }
 
-void scales_t::set_single_scale(float scale) {
+void DNNL_API scales_t::set_single_scale(float scale) {
     count_ = 1;
     mask_ = 0;
     scales_ = scales_buf_;
@@ -72,17 +72,17 @@ status_t scales_t::set(dim_t count, int mask, const float *scales) {
     return status::success;
 }
 
-status_t zero_points_t::get(int arg, int *mask, data_type_t *dt) const {
+status_t DNNL_API zero_points_t::get(int arg, int *mask, data_type_t *dt) const {
     if (mask) *mask = get_mask(arg);
     if (dt) *dt = get_data_type(arg);
     return status::success;
 }
 
-int zero_points_t::get(int arg) const {
+int DNNL_API zero_points_t::get(int arg) const {
     return get_mask(arg);
 }
 
-status_t zero_points_t::set(int arg, int mask, int ndims, const dims_t groups,
+status_t DNNL_API zero_points_t::set(int arg, int mask, int ndims, const dims_t groups,
         data_type_t data_type) {
     const bool supported_arg
             = utils::one_of(arg, DNNL_ARG_SRC, DNNL_ARG_WEIGHTS, DNNL_ARG_DST);
@@ -194,7 +194,7 @@ status_t post_ops_t::append_sum(
     return success;
 }
 
-status_t post_ops_t::append_eltwise(
+status_t DNNL_API post_ops_t::append_eltwise(
         float scale, alg_kind_t alg, float alpha, float beta) {
     if (!math::is_eltwise_ok(data_type::f32, alg, alpha, beta))
         return invalid_arguments;
@@ -257,7 +257,7 @@ status_t post_ops_t::validate_binary(
     return success;
 }
 
-status_t post_ops_t::append_binary(
+status_t DNNL_API post_ops_t::append_binary(
         alg_kind_t alg, const memory_desc_t *user_src1_desc) {
     auto status = validate_binary(alg, user_src1_desc);
     if (status != success) return status;
@@ -412,7 +412,7 @@ status_t primitive_attr_t::set_scratchpad_mode(
     return success;
 }
 
-status_t primitive_attr_t::set_post_ops(const post_ops_t &post_ops) {
+status_t DNNL_API primitive_attr_t::set_post_ops(const post_ops_t &post_ops) {
     post_ops_ = post_ops;
     return status::success;
 }

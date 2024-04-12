@@ -29,7 +29,7 @@ namespace impl {
 namespace graph {
 namespace utils {
 
-int getenv_int_internal(const char *name, int default_value) {
+int DNNL_API getenv_int_internal(const char *name, int default_value) {
     int value = default_value;
     // # of digits in the longest 32-bit signed int + sign + terminating null
     const int len = 12;
@@ -44,7 +44,7 @@ int getenv_int_internal(const char *name, int default_value) {
     return value;
 }
 
-bool check_verbose_string_user(const char *name, const char *expected) {
+bool DNNL_API check_verbose_string_user(const char *name, const char *expected) {
     // Random number to fit possible string input.
     std::string value;
     const int len = 64;

@@ -148,7 +148,7 @@ void print_header(const filter_status_t &filter_status) noexcept {
 }
 
 // hint parameter is the kind of verbose we are querying for
-uint32_t get_verbose(verbose_t::flag_kind verbosity_kind,
+uint32_t DNNL_API get_verbose(verbose_t::flag_kind verbosity_kind,
         component_t::flag_kind filter_kind) noexcept {
 #if defined(DISABLE_VERBOSE)
     return verbose_t::none;
@@ -271,7 +271,7 @@ uint32_t get_verbose(verbose_t::flag_kind verbosity_kind,
 }
 
 static setting_t<bool> verbose_timestamp {false};
-bool get_verbose_timestamp() {
+bool DNNL_API get_verbose_timestamp() {
 #if defined(DISABLE_VERBOSE)
     return false;
 #else

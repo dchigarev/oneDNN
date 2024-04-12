@@ -220,7 +220,7 @@ static inline uint32_t get_verbose_dev_mode(
     return is_dev_mode() ? get_verbose(kind) : 0;
 }
 
-bool get_verbose_timestamp();
+bool DNNL_API get_verbose_timestamp();
 
 /// A container for primitive desc verbose string.
 struct primitive_desc_t;

@@ -64,7 +64,7 @@ constant_tensor_cache_t::constant_tensor_cache_t(
             std::unordered_map<c_key_t, timed_entry_t>>();
 }
 
-constant_tensor_cache_t::~constant_tensor_cache_t() {
+DNNL_API constant_tensor_cache_t::~constant_tensor_cache_t() {
     if (constant_map().empty()) return;
 
 #if defined(_WIN32) && defined(DNNL_WITH_SYCL)
@@ -137,7 +137,7 @@ status_t constant_tensor_cache_t::set_capacity(size_t capacity) {
     return status::success;
 }
 
-size_t constant_tensor_cache_t::get_capacity() {
+size_t DNNL_API constant_tensor_cache_t::get_capacity() {
     return capacity_in_bytes_.load();
 }
 
@@ -148,7 +148,7 @@ c_key_t constant_tensor_cache_t::combine_key(
     return key;
 }
 
-c_value_t constant_tensor_cache_t::get_or_add(c_key_t backend_id,
+c_value_t DNNL_API constant_tensor_cache_t::get_or_add(c_key_t backend_id,
         c_key_t backend_specific_key, size_t size, const c_value_t &value) {
     if (!size) { return c_value_t(); }
 
@@ -193,7 +193,7 @@ c_value_t constant_tensor_cache_t::get_or_add(c_key_t backend_id,
     return e;
 }
 
-void constant_tensor_cache_t::remove_if_exist(
+void DNNL_API constant_tensor_cache_t::remove_if_exist(
         c_key_t backend_id, c_key_t backend_specific_key) {
     c_key_t key = combine_key(backend_id, backend_specific_key);
 
@@ -408,7 +408,7 @@ private:
     std::unordered_map<impl::engine_kind_t, size_t> user_capacities;
 };
 
-constant_tensor_cache_t *get_constant_tensor_cache(
+constant_tensor_cache_t DNNL_API *get_constant_tensor_cache(
         impl::engine_kind_t eng_kind, size_t index) {
     // get the index-th cache instance from the existing cache list.
     std::vector<cache_ptr> &cache_list

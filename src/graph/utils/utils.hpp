@@ -89,8 +89,8 @@ inline size_t lcm(size_t a, size_t b) {
     return a * b / gcd(a, b);
 }
 
-int getenv_int_internal(const char *name, int default_value);
-bool check_verbose_string_user(const char *name, const char *expected);
+int DNNL_API getenv_int_internal(const char *name, int default_value);
+bool DNNL_API check_verbose_string_user(const char *name, const char *expected);
 
 inline std::string thread_id_to_str(std::thread::id id) {
     std::stringstream ss;

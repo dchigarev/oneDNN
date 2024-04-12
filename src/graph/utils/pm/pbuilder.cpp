@@ -80,7 +80,7 @@ std::shared_ptr<consumer_t> dnnl::impl::graph::utils::pm::producer(
     return std::make_shared<producer_t>(p_node, o_t);
 }
 
-std::shared_ptr<in_edge_t> dnnl::impl::graph::utils::pm::in_edge(
+std::shared_ptr<in_edge_t> DNNL_API dnnl::impl::graph::utils::pm::in_edge(
         iport_t i_t, pb_node_t *p_node, oport_t o_t) {
     auto prod = std::make_shared<producer_t>(p_node, o_t);
     auto edge = std::make_shared<in_edge_t>(i_t, prod);
@@ -104,7 +104,7 @@ decision_function dnnl::impl::graph::utils::pm::one_of_kind(
     };
 }
 
-bool pb_op_t::append_decision_function(const decision_function &p_fn) {
+bool DNNL_API pb_op_t::append_decision_function(const decision_function &p_fn) {
     decision_functions_.emplace_back(p_fn);
     return true;
 }
@@ -157,7 +157,7 @@ std::shared_ptr<producer_t> pb_graph_t::get_inner_producer(oport_t o_t) {
     return inner_producers_[o_t];
 }
 
-bool pb_graph_t::create_input_port(
+bool DNNL_API pb_graph_t::create_input_port(
         iport_t p_port, const std::shared_ptr<consumer_t> &p_consumer) {
     for (auto const &con_set : inner_consumers_) {
         if (con_set != nullptr) {
@@ -178,7 +178,7 @@ bool pb_graph_t::create_input_port(
     return true;
 }
 
-bool pb_graph_t::create_output_port(
+bool DNNL_API pb_graph_t::create_output_port(
         oport_t p_port, std::shared_ptr<producer_t> p_producer) {
     if (inner_producers_.size() <= p_port) {
         inner_producers_.resize(p_port + 1, nullptr);
@@ -188,17 +188,17 @@ bool pb_graph_t::create_output_port(
     return true;
 }
 
-bool pb_graph_t::create_input_port(
+bool DNNL_API pb_graph_t::create_input_port(
         iport_t p_port, pb_node_t *p_int_node, iport_t p_int_port) {
     return create_input_port(p_port, consumer(p_int_node, p_int_port));
 }
 
-bool pb_graph_t::create_output_port(
+bool DNNL_API pb_graph_t::create_output_port(
         oport_t p_port, pb_node_t *p_int_node, oport_t p_int_port) {
     return create_output_port(p_port, producer(p_int_node, p_int_port));
 }
 
-bool pb_graph_t::connect_edges(
+bool DNNL_API pb_graph_t::connect_edges(
         pb_node_t *p_node, const in_edges_t &p_in_edges) {
     if (!p_in_edges.empty()) {
         for (auto const &i : p_in_edges) {
@@ -209,7 +209,7 @@ bool pb_graph_t::connect_edges(
     return true;
 }
 
-bool pb_graph_t::set_edge(const std::shared_ptr<consumer_t> &p_consumer,
+bool DNNL_API pb_graph_t::set_edge(const std::shared_ptr<consumer_t> &p_consumer,
         const std::shared_ptr<producer_t> &p_producer) {
     auto con = p_consumer->first;
     con->set_producer(p_consumer->second, p_producer);
@@ -218,7 +218,7 @@ bool pb_graph_t::set_edge(const std::shared_ptr<consumer_t> &p_consumer,
     return true;
 }
 
-std::vector<pb_node_t *> pb_graph_t::get_nodes() {
+std::vector<pb_node_t *> DNNL_API pb_graph_t::get_nodes() {
     std::vector<pb_node_t *> retval;
     for (auto const &i : nodes_) {
         retval.push_back(i.get());
@@ -226,7 +226,7 @@ std::vector<pb_node_t *> pb_graph_t::get_nodes() {
     return retval;
 }
 
-pb_graph_t::pb_graph_t() : min_op_num_ {0} {
+DNNL_API pb_graph_t::pb_graph_t() : min_op_num_ {0} {
     debug_string_ = "pgraph";
 }
 
@@ -264,20 +264,20 @@ pb_op_t DNNL_API *pb_graph_t::append_op(dnnl::impl::graph::op_kind_t p_kind) {
                     + std::to_string(nodes_.size()));
 }
 
-pb_op_t *pb_graph_t::append_alternation(
+pb_op_t DNNL_API *pb_graph_t::append_alternation(
         const std::vector<dnnl::impl::graph::op_kind_t> &p_kind,
         const in_edges_t &p_in_edges) {
     return append_op(one_of_kind(p_kind), p_in_edges,
             "alternation" + std::to_string(nodes_.size()));
 }
 
-pb_op_t *pb_graph_t::append_alternation(
+pb_op_t DNNL_API *pb_graph_t::append_alternation(
         const std::vector<dnnl::impl::graph::op_kind_t> &p_kind) {
     return append_op(one_of_kind(p_kind), {},
             "alternation" + std::to_string(nodes_.size()));
 }
 
-alternation_t *pb_graph_t::append_alternation(
+alternation_t DNNL_API *pb_graph_t::append_alternation(
         const std::vector<std::shared_ptr<pb_graph_t>> &p_nodes,
         const in_edges_t &p_in_edges) {
     for (size_t i = 0; i < p_nodes.size(); ++i) {
@@ -294,12 +294,12 @@ alternation_t *pb_graph_t::append_alternation(
     return p_alternation.get();
 }
 
-alternation_t *pb_graph_t::append_alternation(
+alternation_t DNNL_API *pb_graph_t::append_alternation(
         const std::vector<std::shared_ptr<pb_graph_t>> &p_nodes) {
     return append_alternation(p_nodes, {});
 }
 
-repetition_t *pb_graph_t::append_repetition(
+repetition_t DNNL_API *pb_graph_t::append_repetition(
         const std::shared_ptr<pb_graph_t> &p_node, const port_map &p_map,
         size_t min_rep, size_t max_rep, const in_edges_t &p_in_edges) {
     assertm(p_map.first == 0, "repetition only supports 1 output port");
@@ -315,13 +315,13 @@ repetition_t *pb_graph_t::append_repetition(
     return p_repetition.get();
 }
 
-repetition_t *pb_graph_t::append_repetition(
+repetition_t DNNL_API *pb_graph_t::append_repetition(
         const std::shared_ptr<pb_graph_t> &p_node, const port_map &p_map,
         size_t min_rep, size_t max_rep) {
     return append_repetition(p_node, p_map, min_rep, max_rep, {});
 }
 
-repetition_t *pb_graph_t::append_optional(
+repetition_t DNNL_API *pb_graph_t::append_optional(
         const std::shared_ptr<pb_graph_t> &p_node,
         const in_edges_t &p_in_edges) {
     // When append optional consumer B to a producer A, some conditions need
@@ -346,7 +346,7 @@ repetition_t *pb_graph_t::append_optional(
     return p_repetition.get();
 }
 
-repetition_t *pb_graph_t::append_optional(
+repetition_t DNNL_API *pb_graph_t::append_optional(
         const std::shared_ptr<pb_graph_t> &p_node) {
     return append_optional(p_node, {});
 }

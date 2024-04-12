@@ -376,7 +376,7 @@ bool op_schema_t::verify(const op_t *l_op, bool check_undefined_attrs) const {
     return true;
 }
 
-status_t op_schema_t::shape_infer(op_t *n,
+status_t DNNL_API op_schema_t::shape_infer(op_t *n,
         std::vector<logical_tensor_t *> &inputs,
         std::vector<logical_tensor_t *> &outputs) const {
     shape_infer_fn fn = get_shape_inference_function();
@@ -480,7 +480,7 @@ op_kind_version_schema_map &op_schema_registry_t::get_map() {
     return op_map;
 }
 
-const op_schema_t *op_schema_registry_t::get_op_schema(op_kind_t kind) {
+const op_schema_t DNNL_API *op_schema_registry_t::get_op_schema(op_kind_t kind) {
     auto &op_map = get_map();
     op_schema_t *schema = nullptr;
     get_rw_mutex().lock_read();

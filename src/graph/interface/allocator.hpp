@@ -129,9 +129,9 @@ public:
         dnnl::impl::utils::rw_mutex_t rw_mutex_;
 
     public:
-        void record_allocate(const void *buf, size_t size, mem_type_t type);
+        void DNNL_API record_allocate(const void *buf, size_t size, mem_type_t type);
 
-        void record_deallocate(const void *buf);
+        void DNNL_API record_deallocate(const void *buf);
 
         void reset_peak_temp_memory();
 

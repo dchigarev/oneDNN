@@ -644,13 +644,13 @@ struct dnnl_post_ops : public dnnl::impl::c_compatible {
 
     dnnl::impl::status_t append_sum(float scale, int32_t zero_point = 0,
             dnnl::impl::data_type_t dt = dnnl_data_type_undef);
-    dnnl::impl::status_t append_eltwise(
+    dnnl::impl::status_t DNNL_API append_eltwise(
             float scale, dnnl::impl::alg_kind_t alg, float alpha, float beta);
     dnnl::impl::status_t append_dw(dnnl::impl::data_type_t wei_dt,
             dnnl::impl::data_type_t bias_dt, dnnl::impl::data_type_t dst_dt,
             dnnl::impl::dim_t kernel_size, dnnl::impl::dim_t stride_size,
             dnnl::impl::dim_t padding_l_size);
-    dnnl::impl::status_t append_binary(dnnl::impl::alg_kind_t alg,
+    dnnl::impl::status_t DNNL_API append_binary(dnnl::impl::alg_kind_t alg,
             const dnnl::impl::memory_desc_t *user_src1_desc);
     dnnl::impl::status_t append_prelu(int mask);
 
@@ -837,7 +837,7 @@ struct dnnl_primitive_attr : public dnnl::impl::c_compatible {
             dnnl::impl::accumulation_mode_t am);
     dnnl::impl::status_t set_scratchpad_mode(
             dnnl::impl::scratchpad_mode_t scratchpad_mode);
-    dnnl::impl::status_t set_post_ops(const dnnl::impl::post_ops_t &post_ops);
+    dnnl::impl::status_t DNNL_API set_post_ops(const dnnl::impl::post_ops_t &post_ops);
     dnnl::impl::status_t set_gpu_attr(
             const dnnl::impl::primitive_attr_item_t &gpu_attr);
     dnnl::impl::status_t set_default_formats(

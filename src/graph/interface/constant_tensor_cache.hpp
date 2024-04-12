@@ -106,11 +106,11 @@ struct constant_tensor_cache_t {
 
     // The capacity set or got through these two method is in MBytes
     status_t set_capacity(size_t capacity);
-    size_t get_capacity();
+    size_t DNNL_API get_capacity();
 
-    value_t get_or_add(key_t backend_id, key_t backend_specific_key,
+    value_t DNNL_API get_or_add(key_t backend_id, key_t backend_specific_key,
             size_t size, const value_t &value);
-    void remove_if_exist(key_t backend_id, key_t backend_specific_key);
+    void DNNL_API remove_if_exist(key_t backend_id, key_t backend_specific_key);
 
     size_t get_size() const;
 
@@ -165,7 +165,7 @@ private:
     std::atomic<int32_t> counter_;
 };
 
-constant_tensor_cache_t *get_constant_tensor_cache(
+constant_tensor_cache_t DNNL_API *get_constant_tensor_cache(
         impl::engine_kind_t eng_kind, size_t index);
 
 } // namespace graph

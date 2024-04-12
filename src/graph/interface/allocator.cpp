@@ -99,7 +99,7 @@ status_t DNNL_API dnnl_graph_sycl_interop_make_engine_with_allocator(
 #endif
 }
 
-void dnnl_graph_allocator::monitor_t::record_allocate(
+void DNNL_API dnnl_graph_allocator::monitor_t::record_allocate(
         const void *buf, size_t size, dnnl_graph_allocator::mem_type_t type) {
     const auto persistent = dnnl_graph_allocator::mem_type_t::persistent;
     const auto temp = dnnl_graph_allocator::mem_type_t::temp;
@@ -118,7 +118,7 @@ void dnnl_graph_allocator::monitor_t::record_allocate(
     }
 }
 
-void dnnl_graph_allocator::monitor_t::record_deallocate(const void *buf) {
+void DNNL_API dnnl_graph_allocator::monitor_t::record_deallocate(const void *buf) {
     bool is_persist = persist_mem_infos_.find(buf) != persist_mem_infos_.end();
     if (is_persist) {
         auto persist_pos = persist_mem_infos_.find(buf);
@@ -155,10 +155,10 @@ size_t dnnl_graph_allocator::monitor_t::get_total_persist_memory() {
     return size;
 }
 
-void dnnl_graph_allocator::monitor_t::lock_write() {
+void DNNL_API dnnl_graph_allocator::monitor_t::lock_write() {
     rw_mutex_.lock_write();
 }
 
-void dnnl_graph_allocator::monitor_t::unlock_write() {
+void DNNL_API dnnl_graph_allocator::monitor_t::unlock_write() {
     rw_mutex_.unlock_write();
 }

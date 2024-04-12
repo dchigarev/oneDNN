@@ -57,7 +57,7 @@ pass_base DNNL_API &pass_registry_t::register_pass(const pass_base_ptr &pass) {
     return *pass;
 }
 
-void pass_registry_t::sort_passes() {
+void DNNL_API pass_registry_t::sort_passes() {
     passes_.sort([](const pass_base_ptr &first, const pass_base_ptr &second) {
         return first->get_priority() > second->get_priority();
     });

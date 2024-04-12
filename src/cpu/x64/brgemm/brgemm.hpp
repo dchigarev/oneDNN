@@ -188,7 +188,7 @@ void DNNL_API brgemm_kernel_execute(const brgemm_kernel_t *brg_kernel, int bs,
 ///     * Where: AMX+ hardware; When: always; For: buffer for tiles store.
 ///     * In rest scenarios is not used.
 ///
-void brgemm_kernel_execute(const brgemm_kernel_t *brg_kernel, int bs,
+void DNNL_API brgemm_kernel_execute(const brgemm_kernel_t *brg_kernel, int bs,
         const void *addr_A, const void *addr_B,
         const brgemm_batch_element_t *batch, void *ptr_C,
         void *scratch = nullptr,

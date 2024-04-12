@@ -227,7 +227,7 @@ public:
     bool verify(const op_t *l_op, bool check_undefined_attrs = true) const;
 
     /*! @brief Infer shape with the op schema. */
-    status_t shape_infer(op_t *n, std::vector<logical_tensor_t *> &inputs,
+    status_t DNNL_API shape_infer(op_t *n, std::vector<logical_tensor_t *> &inputs,
             std::vector<logical_tensor_t *> &outputs) const;
 
     /*! @brief Set inputs param option: fixed, optional and variadic. */
@@ -316,7 +316,7 @@ public:
     };
 
     /*! @brief Get the latest schema for an op. */
-    static const op_schema_t *get_op_schema(op_kind_t a_op_kind);
+    static const op_schema_t DNNL_API *get_op_schema(op_kind_t a_op_kind);
 
 private:
     /* !@brief Returns the static op_kind_version_schema_map.*/

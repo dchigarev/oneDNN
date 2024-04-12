@@ -93,7 +93,7 @@ int getenv_int(const char *name, int default_value) {
     return value;
 }
 
-int getenv_int_user(const char *name, int default_value) {
+int DNNL_API getenv_int_user(const char *name, int default_value) {
     int value = default_value;
     // # of digits in the longest 32-bit signed int + sign + terminating null
     const int len = 12;
@@ -158,7 +158,7 @@ void *malloc(size_t size, int alignment) {
     return (rc == 0) ? ptr : nullptr;
 }
 
-void free(void *p) {
+void DNNL_API free(void *p) {
 
     if (memory_debug::is_mem_debug()) return memory_debug::free(p);
 

@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include "dnnl_config.h"
 
 namespace dnnl {
 namespace impl {
@@ -35,7 +36,7 @@ public:
     id_t &operator=(const id_t &other) = delete;
 
 protected:
-    static std::atomic<value_type> counter;
+    static std::atomic<value_type> counter DNNL_API;
     ~id_t() = default;
 
 private:

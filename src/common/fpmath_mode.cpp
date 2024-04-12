@@ -58,7 +58,7 @@ bool is_fpsubtype(data_type_t sub_dt, data_type_t dt) {
     return false;
 }
 
-fpmath_mode_t get_fpmath_mode() {
+fpmath_mode_t DNNL_API get_fpmath_mode() {
     init_fpmath_mode();
     auto mode = default_fpmath.get();
     // Should always be proper, since no way to set invalid mode

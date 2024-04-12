@@ -55,7 +55,7 @@ public:
 
     // sort passes based on their priorities, passes with high priority
     // will be executed before passes with low priority
-    void sort_passes();
+    void DNNL_API sort_passes();
 
     pass_base_ptr &get_pass_ptr(const std::string &pass_name) {
         auto it = passes_map_.find(pass_name);
