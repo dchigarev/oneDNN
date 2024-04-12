@@ -46,6 +46,18 @@ size_t backend_registry_t::extract_backend_id(size_t layout_id) {
     return layout_id & (size_t)((1 << BACKEND_ID_LENGTH) - 1);
 }
 
+std::vector<const backend_t *> DNNL_API &dnnl_get_registered_backends() {
+    return backend_registry_t::get_singleton().get_registered_backends();
+}
+
+std::string DNNL_API dnnl_print_backend_name(const backend_t* bkd) {
+    return bkd->get_name();
+}
+
+void DNNL_API dnnl_register_backend(const backend_t *abackend) {
+    backend_registry_t::get_singleton().register_backend(abackend);
+}
+
 } // namespace graph
 } // namespace impl
 } // namespace dnnl

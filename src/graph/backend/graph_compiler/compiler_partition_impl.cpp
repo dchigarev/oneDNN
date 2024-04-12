@@ -127,6 +127,7 @@ graph::status_t compiler_partition_impl_t::compile(
         const std::vector<graph::logical_tensor_t> &inputs,
         const std::vector<graph::logical_tensor_t> &outputs,
         const graph::engine_t *aengine) const {
+    std::cout << "COMPILING PART USING GRAPH COMPILER" << std::endl;
     try {
         graph::status_t res = status::success;
         // here we call infer_shape since logical tensor info

@@ -177,6 +177,7 @@ public:
             const engine_t *g_engine) const override {
         // compile will transform the subgraph in partition, so we make
         // a copy
+        std::cout << "COMPILING PART USING DNNL COMPILER" << std::endl;
         auto part = std::dynamic_pointer_cast<dnnl_partition_impl_t>(
                 this->clone());
 

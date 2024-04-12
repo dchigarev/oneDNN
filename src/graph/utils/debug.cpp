@@ -73,7 +73,7 @@ const char *property_type2str(property_type_t v) {
     return "unknown property_type";
 }
 
-std::string partition_kind2str(partition_kind_t v) {
+std::string DNNL_API partition_kind2str(partition_kind_t v) {
 #define CASE(x) \
     case (partition_kind_t::x): return #x
 
@@ -110,7 +110,7 @@ std::string partition_kind2str(partition_kind_t v) {
 #undef CASE
 }
 
-partition_kind_t str2partition_kind(const std::string &str) {
+partition_kind_t DNNL_API str2partition_kind(const std::string &str) {
 #define IF_HANDLE(x) \
     if (str == #x) return partition_kind_t::x
 

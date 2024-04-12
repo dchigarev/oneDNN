@@ -32,8 +32,8 @@ const char *fpmath_mode2str(fpmath_mode_t v);
 const char *layout_type2str(layout_type_t v);
 const char *property_type2str(property_type_t v);
 
-std::string partition_kind2str(partition_kind_t v);
-partition_kind_t str2partition_kind(const std::string &str);
+std::string DNNL_API partition_kind2str(partition_kind_t v);
+partition_kind_t DNNL_API str2partition_kind(const std::string &str);
 
 } // namespace utils
 } // namespace graph

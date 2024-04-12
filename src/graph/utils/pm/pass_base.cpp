@@ -22,7 +22,7 @@ namespace graph {
 namespace pass {
 
 template <>
-pass_base &pass_base::set_attr<FCreatePattern>(
+pass_base DNNL_API &pass_base::set_attr<FCreatePattern>(
         const std::string &attr_name, // NOLINT(*)
         const FCreatePattern &func) {
     Pattern pgraph = std::make_shared<pb_graph_t>();

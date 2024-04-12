@@ -548,6 +548,7 @@ status_t dnnl_graph_partition::compile(compiled_partition_t *cp,
         return status::invalid_arguments;
 
     const backend_t *backend = pimpl_->get_assigned_backend();
+    std::cout << "dnnl_graph_partition::compile, assigned backend is: " << backend->get_name() << std::endl;
     if (!backend) return status::invalid_arguments;
 
     // Pre-process the given logical tensor. The pre-process includes

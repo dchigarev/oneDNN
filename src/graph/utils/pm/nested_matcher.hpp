@@ -199,7 +199,7 @@ std::vector<value_t::consumer_t> sort_op_consumers(
 // Find a match given a graph op (first_op) from an input graph
 // and a pre-defined pattern.
 //
-bool match_pattern(op_t *first_op, const std::shared_ptr<pb_graph_t> &pattern,
+bool DNNL_API match_pattern(op_t *first_op, const std::shared_ptr<pb_graph_t> &pattern,
         std::vector<op_t *> &fusion_ops);
 
 //

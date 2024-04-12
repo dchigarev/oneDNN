@@ -79,21 +79,21 @@ public:
     const static size_t DEFAULT_ID = std::numeric_limits<size_t>::max();
 
     // create dnnl_graph_op with explicit id, kind, and string
-    dnnl_graph_op(
+    DNNL_API dnnl_graph_op(
             size_t id, op_kind_t kind, std::string name, bool internal = false);
 
     // create dnnl_graph_op with default id, only for internal use.
-    dnnl_graph_op(op_kind_t kind, std::string name)
+    DNNL_API dnnl_graph_op(op_kind_t kind, std::string name)
         : dnnl_graph_op(DEFAULT_ID, kind, std::move(name), true) {}
 
     // convenient function to make tests happy
-    dnnl_graph_op(op_kind_t kind)
+    DNNL_API dnnl_graph_op(op_kind_t kind)
         : dnnl_graph_op(DEFAULT_ID, kind, kind2str(kind), true) {}
 
     ~dnnl_graph_op() = default;
 
     // which op produced this input?
-    dnnl_graph_op *get_input_op(size_t index) {
+    dnnl_graph_op DNNL_API *get_input_op(size_t index) {
         return &(inputs_[index]->get_producer());
     }
 
@@ -116,7 +116,7 @@ public:
     size_t num_inputs() const { return inputs_.size(); }
 
     // add an input value to the op
-    void add_input(const std::shared_ptr<value_t> &value) {
+    void DNNL_API add_input(const std::shared_ptr<value_t> &value) {
         // setup the input_tensor_map_
         const size_t offset = inputs_.size();
         input_tensor_map_[offset] = std::make_pair(id_, offset);
@@ -125,7 +125,7 @@ public:
     }
 
     // frontend API, add an input logical tensor to the op
-    void add_input(const logical_tensor_t &lt) {
+    void DNNL_API add_input(const logical_tensor_t &lt) {
         add_input(std::make_shared<value_t>(lt));
     }
 

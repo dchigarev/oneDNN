@@ -27,6 +27,7 @@ if(DNNL_SYCL_CUDA)
     append(CMAKE_CXX_FLAGS "-Wno-linker-warnings")
 endif()
 
+# include_directories("/localdisk/dchigare/repos/oneDNN/src")
 # propagate sanitizer flags
 append(CMAKE_C_FLAGS "${CMAKE_CCXX_SANITIZER_FLAGS}")
 append(CMAKE_CXX_FLAGS "${CMAKE_CCXX_SANITIZER_FLAGS}")

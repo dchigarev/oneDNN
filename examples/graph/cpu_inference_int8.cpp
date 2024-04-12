@@ -52,6 +52,8 @@
 #include "example_utils.hpp"
 #include "graph_example_utils.hpp"
 
+// #include "graph/interface/backend.hpp"
+
 using namespace dnnl::graph;
 using data_type = logical_tensor::data_type;
 using layout_type = logical_tensor::layout_type;
@@ -64,6 +66,8 @@ using dims = logical_tensor::dims;
 /// @section graph_cpu_inference_int8_cpp_tutorial simple_pattern_int8() function
 ///
 void simple_pattern_int8() {
+
+    // dnnl::impl::graph::backend_registry_t::get_singleton().get_registered_backends();
 
     dim N = 8, IC = 256, IH = 56, IW = 56, KH = 1, KW = 1, OC = 64;
 
@@ -164,7 +168,7 @@ void simple_pattern_int8() {
     /// Create graph and add ops to the graph
     /// @snippet cpu_inference_int8.cpp Create graph and add ops
     //[Create graph and add ops]
-    graph g(dnnl::engine::kind::cpu);
+    dnnl::graph::graph g(dnnl::engine::kind::cpu);
 
     g.add_op(dequant0);
     g.add_op(dequant1);

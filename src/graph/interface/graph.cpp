@@ -289,7 +289,7 @@ status_t dnnl_graph_graph::analyze() {
 }
 
 // Deep copy a graph
-std::vector<dnnl_graph_graph::op_ptr> dnnl_graph_graph::deep_copy(
+std::vector<dnnl_graph_graph::op_ptr> DNNL_API dnnl_graph_graph::deep_copy(
         const std::vector<dnnl_graph_graph::op_ptr> &ops) {
     using op_ptr = dnnl_graph_graph::op_ptr;
     using value_ptr = std::shared_ptr<value_t>;
@@ -421,9 +421,11 @@ status_t DNNL_API dnnl_graph_graph_filter(
     // Get partition_impl by calling each backends
     std::vector<const backend_t *> &backends
             = backend_registry_t::get_singleton().get_registered_backends();
+    std::cout << "dnnl_graph_graph_filter: runing through backends" << std::endl;
     for (auto cbkd : backends) {
         if (graph->num_unpartitioned_ops() == 0) break;
         backend_t *bkd = const_cast<backend_t *>(cbkd);
+        std::cout << "trying backend " << bkd->get_name() << " " << bkd->get_priority() << std::endl;
         status_t ret = bkd->get_partitions(*graph, policy);
         if (ret != status::success) return status::invalid_graph;
     }

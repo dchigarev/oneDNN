@@ -25,7 +25,7 @@ namespace graph {
 using namespace utils;
 namespace pass {
 
-bool default_pass_filter(const pass_base_ptr &pass, partition_policy_t policy) {
+bool DNNL_API default_pass_filter(const pass_base_ptr &pass, partition_policy_t policy) {
     // The default pass filter function, which always return true and
     // allows all passes
     UNUSED(pass);
@@ -34,7 +34,7 @@ bool default_pass_filter(const pass_base_ptr &pass, partition_policy_t policy) {
 }
 
 // register a pass
-pass_base &pass_registry_t::register_pass(const std::string &backend_name,
+pass_base DNNL_API &pass_registry_t::register_pass(const std::string &backend_name,
         const std::string &pass_name, pass_create_fn fn) {
     // create new pass
     auto find = std::find_if(passes_.begin(), passes_.end(),
@@ -51,7 +51,7 @@ pass_base &pass_registry_t::register_pass(const std::string &backend_name,
     }
 }
 
-pass_base &pass_registry_t::register_pass(const pass_base_ptr &pass) {
+pass_base DNNL_API &pass_registry_t::register_pass(const pass_base_ptr &pass) {
     passes_.push_back(pass);
     passes_map_[pass->get_pass_name()] = pass;
     return *pass;
@@ -137,9 +137,11 @@ impl::status_t pass_manager_t::run_passes(graph_t &agraph, std::istream *fs,
     // if no ifstream is given or the string provided is not a valid json,
     // use the passes in the pass manager.
     const std::list<pass_base_ptr> &passes = get_passes();
+    std::cout << "going through passes: " << passes.size() << std::endl;
     for (auto &pass : passes) {
         if (!filter_fn(pass, policy)) continue;
         if (pass->get_enable()) {
+            std::cout << "running pass: " << pass->get_pass_name() << " " << pass->get_pass_backend() << std::endl;
             status = pass->run(agraph);
             if (status != impl::status::success) return status;
         }
@@ -149,7 +151,7 @@ impl::status_t pass_manager_t::run_passes(graph_t &agraph, std::istream *fs,
     return impl::status::success;
 }
 
-impl::status_t pass_manager_t::run_passes(graph_t &agraph,
+impl::status_t DNNL_API pass_manager_t::run_passes(graph_t &agraph,
         const std::string &pass_config_json, partition_policy_t policy,
         pass_filter_fn filter_fn) {
     std::ifstream fs(pass_config_json.c_str());

@@ -102,6 +102,7 @@ status_t compiler_backend_t::get_partitions(
     const bool disable_compiler_bkd
             = graph::utils::getenv_int_internal("DISABLE_COMPILER_BACKEND", 0)
             > 0;
+    std::cout << "use compiler " << !disable_compiler_bkd << std::endl;
     if (disable_compiler_bkd) return status::success;
     graph::pass::pass_manager_t pm(get_pass_registry());
     pm.run_passes(agraph, "", policy);
@@ -111,6 +112,7 @@ status_t compiler_backend_t::get_partitions(
 } // namespace compiler_impl
 
 void register_compiler_backend() {
+    std::cout << "REGISTERING COMPILER BACKEND" << std::endl;
     backend_registry_t::get_singleton().register_backend(
             &compiler_impl::compiler_backend_t::get_singleton());
 }

@@ -36,7 +36,7 @@ namespace pass {
 using pass_filter_fn
         = std::function<bool(const pass_base_ptr &, partition_policy_t)>;
 
-bool default_pass_filter(const pass_base_ptr &pass, partition_policy_t policy);
+bool DNNL_API default_pass_filter(const pass_base_ptr &pass, partition_policy_t policy);
 
 /*!
  * \brief pass_registry is a registry class that
@@ -101,12 +101,12 @@ public:
     void print_passes(std::ostream *os);
 
     // run all passes enabled according to passConfig
-    impl::status_t run_passes(graph_t &agraph,
+    impl::status_t DNNL_API run_passes(graph_t &agraph,
             const std::string &pass_config_json,
             partition_policy_t policy = partition_policy::fusion,
             pass_filter_fn filter_fn = default_pass_filter);
 
-    impl::status_t run_passes(graph_t &agraph, std::istream *fs,
+    impl::status_t DNNL_API run_passes(graph_t &agraph, std::istream *fs,
             partition_policy_t policy = partition_policy::fusion,
             pass_filter_fn filter_fn = default_pass_filter);
 };

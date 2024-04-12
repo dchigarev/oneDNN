@@ -230,7 +230,7 @@ pb_graph_t::pb_graph_t() : min_op_num_ {0} {
     debug_string_ = "pgraph";
 }
 
-pb_op_t *pb_graph_t::append_op(const decision_function &p_fn,
+pb_op_t DNNL_API *pb_graph_t::append_op(const decision_function &p_fn,
         const in_edges_t &p_in_edges, std::string name) {
     min_op_num_ += 1;
     // special handling for op with variadic inputs, the minimum
@@ -246,19 +246,19 @@ pb_op_t *pb_graph_t::append_op(const decision_function &p_fn,
     return p_op.get();
 }
 
-pb_op_t *pb_graph_t::append_op(
+pb_op_t DNNL_API *pb_graph_t::append_op(
         const decision_function &p_fn, std::string name) {
     return append_op(p_fn, {}, std::move(name));
 }
 
-pb_op_t *pb_graph_t::append_op(
+pb_op_t DNNL_API *pb_graph_t::append_op(
         dnnl::impl::graph::op_kind_t p_kind, const in_edges_t &p_in_edges) {
     return append_op(kind(p_kind), p_in_edges,
             dnnl::impl::graph::op_t::kind2str(p_kind)
                     + std::to_string(nodes_.size()));
 }
 
-pb_op_t *pb_graph_t::append_op(dnnl::impl::graph::op_kind_t p_kind) {
+pb_op_t DNNL_API *pb_graph_t::append_op(dnnl::impl::graph::op_kind_t p_kind) {
     return append_op(kind(p_kind), {},
             dnnl::impl::graph::op_t::kind2str(p_kind)
                     + std::to_string(nodes_.size()));

@@ -588,7 +588,7 @@ std::vector<value_t::consumer_t> sort_op_consumers(
     return sorted_consumers;
 }
 
-bool match_pattern(op_t *first_op, const std::shared_ptr<pb_graph_t> &pattern,
+bool DNNL_API match_pattern(op_t *first_op, const std::shared_ptr<pb_graph_t> &pattern,
         std::vector<op_t *> &fusion_ops) {
     match_context_t global_ctx {nullptr, nullptr};
     match_context_t init_ctx {&global_ctx, pattern.get()};
