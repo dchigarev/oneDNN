@@ -43,12 +43,13 @@ struct engine_ref_data {
 
 struct compiler_graph_engine_t : public gc::runtime::engine_t {
     graph::engine_t *engine_;
+    graph_compiler::EngineContext *ctx_;
     constant_tensor_cache_t *cache_;
     std::shared_ptr<engine_ref_data> engine_ref_data_ptr_;
     compiler_graph_engine_t(gc::runtime::engine_vtable_t *vtable,
             graph::engine_t *engine,
             const std::shared_ptr<engine_ref_data> &engine_ref_data_ptr);
-
+    compiler_graph_engine_t(graph::engine_t *engine);
     ~compiler_graph_engine_t();
 };
 

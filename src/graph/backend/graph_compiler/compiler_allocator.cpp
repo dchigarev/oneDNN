@@ -125,6 +125,15 @@ compiler_graph_engine_t::compiler_graph_engine_t(
     cache_->retain();
 }
 
+compiler_graph_engine_t::compiler_graph_engine_t(
+        graph::engine_t *engine)
+    : gc::runtime::engine_t {nullptr}
+    , engine_ {engine}
+    , cache_ {get_constant_tensor_cache(engine_->kind(), engine_->index())} {
+    engine_->retain();
+    cache_->retain();
+}
+
 compiler_graph_engine_t::~compiler_graph_engine_t() {
     std::lock_guard<std::mutex> lock(engine_ref_data_ptr_->global_mutex_);
     gc::release_runtime_memory(this);

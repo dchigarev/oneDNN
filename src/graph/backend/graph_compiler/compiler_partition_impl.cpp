@@ -37,6 +37,7 @@
 #include "runtime/runtime.hpp"
 #include "runtime/thread_locals.hpp"
 #include "utils.hpp"
+#include "gc_test.hpp"
 
 namespace dnnl {
 namespace impl {
@@ -120,6 +121,71 @@ graph::status_t compiler_partition_impl_t::infer_shape(
         return graph::status::success;
     });
     return ret;
+}
+
+
+graph::status_t compiler_partition_impl_t::compile(
+        graph::compiled_partition_t *compiled_partition,
+        const std::vector<graph::logical_tensor_t> &inputs,
+        const std::vector<graph::logical_tensor_t> &outputs,
+        const graph::engine_t *aengine) const {
+    // auto res = this->infer_shape(inputs, outputs);
+    // if (res != status::success) { return res; }
+
+    std::string json;
+    // Current serialization API can only serialize into a file
+    // graph::graph_t(ops_).serialize("temp.json");
+    // std::string json = read_file_as_string("temp.json");
+    // graph::graph_t(ops_).serialize(/*output_string&=*/json);
+    json = ""; // dummy json
+
+    graph_compiler::GraphCompiler *gc_ptr;
+
+    // we need to hold a reference to 'aengine', to keep it alive
+    // graph_engine defines EngineContext (fills vtable and passes it to the context)
+    auto graph_engine = std::make_shared<compiler_graph_engine_t>(
+                    const_cast<graph::engine_t *>(aengine));
+    auto gc_ptr = graph_compiler::create(gc_ptr, graph_engine->ctx_); // TODO: check status
+
+    graph_compiler::Executable* exe;
+    graph_compiler::compile(gc_ptr, json.data(), exe); // TODO: check status
+    
+    auto pimpl = std::make_shared<compiler_compiled_partition_impl_t>(
+        *aengine, // required by the base class constructor
+        inputs, // required by the base class constructor
+        outputs, // required by the base class constructor
+        std::vector<graph::inplace_pair_t>(), // required by the base class constructor but is always empty in our case
+        exe,
+        graph_engine, // passing the engine further to keep 'aengine' alive
+        gc_ptr // graph_compiler::execute() takes graph compiler struct, so we'll need it later
+        // std::move(dyn_inputs), we're not parsing the graph here, so we don't know dyn inps
+        // std::move(dyn_outputs) we're not parsing the graph here, so we don't know dyn outps
+    );
+    compiled_partition->init(pimpl);
+    return status::success;
+}
+
+graph::status_t compiler_compiled_partition_impl_t::execute(
+        const graph::stream_t *astream,
+        const std::vector<graph::tensor_t> &inputs,
+        const std::vector<graph::tensor_t> &outputs) {
+    
+    UNUSED(astream); // ???
+
+    std::vector<void*> inps(inputs.size());
+    for (auto x : inputs) {
+        inps.push_back(x.get_data_handle());
+    }
+    std::vector<void*> oups(outputs.size());
+    for (auto x : outputs) {
+        oups.push_back(x.get_data_handle());
+    }
+    // TODO: there used to be the logic of extracting actual shapes for
+    // dynamic tensors, what should we do instead?
+    graph_compiler::ExecutionArgs args {inps.data(), oups.data(), inps.size(), oups.size()};
+    graph_compiler::execute(gc_ptr_, exe_, args); // TODO: check status
+
+    return status::success;
 }
 
 graph::status_t compiler_partition_impl_t::compile(
