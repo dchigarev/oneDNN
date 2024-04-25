@@ -20,21 +20,6 @@ void json_to_sc_graph(const char* json, gc::sc_graph_t &out_graph, std::vector<g
 
 /*=============*/
 
-struct GraphCompiler {
-    std::shared_ptr<gc::runtime::engine_t> eng;
-};
-
-std::shared_ptr<dnnl::impl::graph::gc::context_t> build_sc_context(GraphCompiler* gc_ptr);
-gc::runtime::stream_t* build_sc_stream(GraphCompiler* gc_ptr);
-
-struct Executable;
-struct Hint;
-struct Hints{
-    Hint* h;
-};
-enum Status{ OK };
-struct EngineContext;
-
 struct AllocatorsVTable{
     ///////// allocators:
     // use case:
@@ -48,6 +33,7 @@ struct AllocatorsVTable{
     dealloc_t persistent_dealloc;
     alloc_t temp_alloc;
     dealloc_t temp_dealloc;
+    // Expose const_cache_proxy structure???
     // std::shared_ptr<const_cache_proxy> (*alloc_and_register_tensor_cache)(
     //         engine_t *, size_t);
     size_t (*get_tensor_cache_cap)(EngineContext*);
@@ -58,6 +44,42 @@ struct EngineContext {
     void* parent_engine; // meta info for funcs from vtable (may be null)
     AllocatorsVTable* avtable;
 };
+
+struct GraphCompiler { // this is an impl, it won't be exposed to a user
+    EngineContext* ctx;
+    std::shared_ptr<gc::runtime::engine_t> eng;
+    // 'eng' expects a vtable with the following interface:
+    // void* allocator(gc::runtime::engine_t*, size_t);
+    // how to go from engine_t* -> EngineContext??
+    GraphCompiler(EngineContext* ctx) {
+        std::function<void* (gc::runtime::engine_t*, size_t)> persistent_alloc = 
+            [ctx](gc::runtime::engine_t* eng, size_t sz) {
+                UNUSED(eng);
+                return ctx->avtable->persistent_alloc(ctx, sz);
+            };
+        // define other allocs...
+
+        gc::runtime::engine_vtable_t vtable {
+            /*persistent_alloc=*/persistent_alloc
+            // other allocators ...
+        };
+        ctx = ctx;
+        eng = gc::runtime::engine_vtable_t{vtable};
+    }
+
+};
+
+std::shared_ptr<dnnl::impl::graph::gc::context_t> build_sc_context(GraphCompiler* gc_ptr);
+gc::runtime::stream_t* build_sc_stream(GraphCompiler* gc_ptr);
+
+struct Executable;
+struct Hint;
+struct Hints{
+    Hint* h;
+};
+enum Status{ OK };
+struct EngineContext;
+
 struct ExecutionArgs {
     void* inputs;
     void* outputs;
@@ -65,8 +87,7 @@ struct ExecutionArgs {
 };
 
 Status create(GraphCompiler* gc_ptr, EngineContext* ctx) {
-    UNUSED(ctx); // ignore for now
-    gc_ptr = new GraphCompiler{};
+    gc_ptr = new GraphCompiler{ctx};
     return Status::OK;
 }
 
@@ -85,12 +106,12 @@ Status compile(GraphCompiler* gc_ptr, const char* graph_json, Executable* exe) {
 }
 Status compile(GraphCompiler* gc, const char* graph_json, Executable*, Hints*);
 Status execute(GraphCompiler* gc_ptr, Executable* exe, ExecutionArgs args) {
-    // TODO: build the stream based on gc's context
     auto str = build_sc_stream(gc_ptr);
     std::vector<gc::generic_val> call_args;
     call_args.reserve(args.inputs_size + args.output_size);
 
-    // ??
+    // what if some of them were dynamic inputs??
+    // how can we get the shapes??
     for (size_t i=0; i<args.inputs_size; i++){
         call_args.emplace_back(args.inputs + i);
     }
@@ -109,16 +130,20 @@ struct Executable {
 };
 
 std::shared_ptr<gc::context_t> build_sc_context(GraphCompiler* gc_ptr) {
-    // TODO: build context based on gc_ptr's info
-    return std::make_shared<gc::context_t>(*gc::get_default_context());
+    auto ctx = std::make_shared<gc::context_t>(*gc::get_default_context());
+    ctx->engine_ = gc_ptr->eng.get();
 }
 
 gc::runtime::stream_t* build_sc_stream(GraphCompiler* gc_ptr) {
     // TODO: build stream based on gc_ptr's info
-    return gc::runtime::get_default_stream();
+    return new gc::runtime::stream_t {
+        /*stream_vtable=*/{
+            /*parallel_call_cpu_t=*/sc_parallel_call_cpu_with_env_impl,
+            /*dnnl_stream=*/nullptr //(unused in case of TBB and OMP)
+        },
+        /*sc_engine=*/gc_ptr->eng.get()
+    };
 }
-
-struct GraphCompiler {};
 
 }
 }
