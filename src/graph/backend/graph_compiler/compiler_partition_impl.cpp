@@ -124,6 +124,22 @@ graph::status_t compiler_partition_impl_t::infer_shape(
 }
 
 
+static std::unordered_map<const graph::engine_t *,
+        std::weak_ptr<compiler_graph_engine_t>> engine_cache;
+
+std::shared_ptr<compiler_graph_engine_t> get_engine_from_cache_or_create(const graph::engine_t * aengine) {
+    auto ptr = engine_cache.find(aengine);
+    if (ptr != engine_cache.end()) {
+        return ptr->second.lock();
+    }
+
+    // compiler_graph_engine initializes EngineContext and fills vtable
+    auto graph_engine = std::make_shared<compiler_graph_engine_t>(
+                    const_cast<graph::engine_t *>(aengine));
+    engine_cache[aengine] = graph_engine;
+    return graph_engine;
+}
+
 graph::status_t compiler_partition_impl_t::compile(
         graph::compiled_partition_t *compiled_partition,
         const std::vector<graph::logical_tensor_t> &inputs,
@@ -143,6 +159,7 @@ graph::status_t compiler_partition_impl_t::compile(
 
     // we need to hold a reference to 'aengine', to keep it alive
     // graph_engine defines EngineContext (fills vtable and passes it to the context)
+    std::shared_ptr<compiler_graph_engine_t> graph_engine = get_engine_from_cache_or_create(aengine);
     auto graph_engine = std::make_shared<compiler_graph_engine_t>(
                     const_cast<graph::engine_t *>(aengine));
     auto gc_ptr = graph_compiler::create(gc_ptr, graph_engine->ctx_); // TODO: check status

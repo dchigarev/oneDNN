@@ -22,6 +22,7 @@
 #include "compiler_backend.hpp"
 #include "runtime/const_cache_wrapper.hpp"
 #include "runtime/runtime.hpp"
+#include "gc_test.hpp"
 
 #define ALLOCATOR_ALIGNMENT 64
 namespace dnnl {
@@ -114,52 +115,33 @@ using namespace gc::runtime;
 
 using sc_engine_t = gc::runtime::engine_t;
 
-compiler_graph_engine_t::compiler_graph_engine_t(
-        gc::runtime::engine_vtable_t *vtable, graph::engine_t *engine,
-        const std::shared_ptr<engine_ref_data> &engine_ref_data_ptr)
-    : gc::runtime::engine_t {vtable}
-    , engine_ {engine}
-    , cache_ {get_constant_tensor_cache(engine_->kind(), engine_->index())}
-    , engine_ref_data_ptr_ {engine_ref_data_ptr} {
-    engine_->retain();
-    cache_->retain();
-}
-
-compiler_graph_engine_t::compiler_graph_engine_t(
-        graph::engine_t *engine)
-    : gc::runtime::engine_t {nullptr}
+compiler_graph_engine_t::compiler_graph_engine_t(graph_compiler::AllocatorsVTable *vtable,
+            graph::engine_t *engine)
     , engine_ {engine}
     , cache_ {get_constant_tensor_cache(engine_->kind(), engine_->index())} {
+    ctx_ = new graph_compiler::EngineContext{0, this, vtable};
     engine_->retain();
     cache_->retain();
 }
 
+
 compiler_graph_engine_t::~compiler_graph_engine_t() {
-    std::lock_guard<std::mutex> lock(engine_ref_data_ptr_->global_mutex_);
-    gc::release_runtime_memory(this);
-    for (auto iter = engine_ref_data_ptr_->engine_map_.begin();
-            iter != engine_ref_data_ptr_->engine_map_.end();) {
-        if (iter->second.lock() == nullptr) {
-            iter = engine_ref_data_ptr_->engine_map_.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
     cache_->release();
     engine_->release();
+    del ctx_;
 }
 
-static void *compiler_graph_global_alloc(sc_engine_t *eng, size_t sz) {
+static void *compiler_graph_global_alloc(graph_compiler::EngineContext *eng, size_t sz) {
     allocator_t *alloc = static_cast<allocator_t *>(
-            static_cast<compiler_graph_engine_t *>(eng)
+            static_cast<compiler_graph_engine_t *>(eng->parent_engine)
                     ->engine_->get_allocator());
     return alloc->allocate(
             sz, {allocator_t::mem_type_t::persistent, ALLOCATOR_ALIGNMENT});
 }
 
-static void compiler_graph_global_free(sc_engine_t *eng, void *p) {
+static void compiler_graph_global_free(graph_compiler::EngineContext *eng, void *p) {
     allocator_t *alloc = static_cast<allocator_t *>(
-            static_cast<compiler_graph_engine_t *>(eng)
+            static_cast<compiler_graph_engine_t *>(eng->parent_engine)
                     ->engine_->get_allocator());
     alloc->deallocate(p);
 }
@@ -175,15 +157,15 @@ static void compiler_graph_temp_free(sc_engine_t *eng, void *p) {
 }
 #endif
 
-static size_t get_engine_tensor_cache_cap(sc_engine_t *engine) {
-    auto eng = static_cast<compiler_impl::compiler_graph_engine_t *>(engine);
+static size_t get_engine_tensor_cache_cap(graph_compiler::EngineContext *engine) {
+    auto eng = static_cast<compiler_impl::compiler_graph_engine_t *>(engine->parent_engine);
     return eng->cache_->get_capacity();
 }
 
-engine_vtable_t graph_engine_vtable {compiler_graph_global_alloc,
+graph_compiler::AllocatorsVTable graph_engine_vtable {compiler_graph_global_alloc,
         compiler_graph_global_free, compiler_graph_global_alloc,
         compiler_graph_global_free,
-        gc::runtime::do_create_and_register_const_cache,
+        // gc::runtime::do_create_and_register_const_cache,
         get_engine_tensor_cache_cap};
 
 compiler_graph_stream_t::compiler_graph_stream_t(

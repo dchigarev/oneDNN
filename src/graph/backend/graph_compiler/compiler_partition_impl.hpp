@@ -124,7 +124,7 @@ public:
             const std::vector<graph::logical_tensor_t> &inputs,
             const std::vector<graph::logical_tensor_t> &outputs,
             const std::vector<graph::inplace_pair_t> &inplace_pairs,
-            const std::shared_ptr<gc::jit_function_t> &jit_func,
+            const std::shared_ptr<graph_compiler::Executable> &jit_func,
             const std::shared_ptr<graph::compiler_impl::compiler_graph_engine_t>
                     &graph_engine,
             std::vector<gc::runtime::dynamic_tensor_t> &&dyn_inputs,
