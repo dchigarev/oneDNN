@@ -44,6 +44,11 @@ void register_fake_backend();
 // register graph compiler backend
 void register_compiler_backend();
 #endif
+#ifdef DNNL_ENABLE_ELYZOR_BACKEND
+// register graph compiler backend
+void register_elyzor_backend();
+#endif
+
 
 class backend_t {
 public:
@@ -202,6 +207,9 @@ private:
             register_fake_backend();
 #ifdef DNNL_ENABLE_COMPILER_BACKEND
             register_compiler_backend();
+#endif
+#ifdef DNNL_ENABLE_ELYZOR_BACKEND
+            register_elyzor_backend();
 #endif
         });
     }
