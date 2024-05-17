@@ -2005,6 +2005,73 @@ inline void add_distill_bert_MHA(graph::graph_t *agraph, bool use_bf16 = false,
     }
 }
 
+inline void add_simple_mlp_subgraph(graph::graph_t *agraph, bool use_bf16 = false,
+        graph::dim_t batch_size = 1, graph::dim_t layer = 1,
+        std::vector<graph::dim_t> hidden_size = {13, 512},
+        std::vector<graph::op_kind_t> act_type = {graph::op_kind::ReLU},
+        bool separate_bias_add = false) {
+    size_t lt_idx = 0;
+    size_t op_idx = 0;
+
+    auto dtype = use_bf16 ? graph::data_type::bf16 : graph::data_type::f32;
+
+    std::vector<graph::dim_t> layer_input_size {batch_size, hidden_size[0]};
+    graph::logical_tensor_t input
+            = utils::logical_tensor_init(lt_idx++, layer_input_size, dtype);
+
+    for (graph::dim_t i = 0; i < layer; ++i) {
+        std::vector<graph::dim_t> layer_weight_size {
+                hidden_size[i], hidden_size[i + 1]};
+        std::vector<graph::dim_t> layer_bias_size {hidden_size[i + 1]};
+        std::vector<graph::dim_t> layer_dst_size {
+                batch_size, hidden_size[i + 1]};
+
+        graph::logical_tensor_t weight, bias, matmul_dst, add_dst, act_dst;
+
+        weight = utils::logical_tensor_init(lt_idx++, layer_weight_size, dtype);
+        weight.property = property_type::constant;
+        bias = utils::logical_tensor_init(lt_idx++, layer_bias_size, dtype);
+        bias.property = property_type::constant;
+        matmul_dst
+                = utils::logical_tensor_init(lt_idx++, layer_dst_size, dtype);
+        add_dst = utils::logical_tensor_init(lt_idx++, layer_dst_size, dtype);
+        act_dst = utils::logical_tensor_init(lt_idx++, layer_dst_size, dtype);
+
+        std::string layer_suffix = "_layer" + std::to_string(i);
+        graph::op_t matmul {
+                op_idx++, graph::op_kind::MatMul, "matmul" + layer_suffix};
+        graph::op_t add {op_idx++, graph::op_kind::Add, "add" + layer_suffix};
+        graph::op_t activation {
+                op_idx++, act_type[i], "activation" + layer_suffix};
+
+        matmul.add_input(input);
+        matmul.add_input(weight);
+        matmul.add_output(matmul_dst);
+        // if (separate_bias_add) {
+        //     add.add_input(matmul_dst);
+        //     add.add_input(bias);
+        //     add.add_output(add_dst);
+        // } else {
+        matmul.add_input(bias);
+        // }
+        input = matmul_dst;
+
+        // if (act_type[i] == graph::op_kind::Wildcard) {
+        //     input = separate_bias_add ? add_dst : matmul_dst;
+        // } else {
+        //     activation.add_input(separate_bias_add ? add_dst : matmul_dst);
+        //     activation.add_output(act_dst);
+        //     input = act_dst;
+        // }
+
+        agraph->add_op(&matmul);
+        // if (separate_bias_add) { agraph->add_op(&add); }
+        // if (act_type[i] != graph::op_kind::Wildcard) {
+        //     agraph->add_op(&activation);
+        // }
+    }
+}
+
 inline void add_mlp_subgraph(graph::graph_t *agraph, bool use_bf16 = false,
         graph::dim_t batch_size = 1, graph::dim_t layer = 1,
         std::vector<graph::dim_t> hidden_size = {13, 512},

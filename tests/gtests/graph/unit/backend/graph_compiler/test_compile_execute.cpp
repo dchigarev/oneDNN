@@ -547,6 +547,29 @@ TEST(GCGraphTest, INT8MLPCompileExecution_CPU) {
     compile_execution_pipeline(agraph, 1);
 }
 
+TEST(GCTestSimple, MyTest) {
+    // REQUIRE_AMXBF16();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    compiler_utils::add_mlp_subgraph(&agraph, true, 1, 5,
+            {479, 1024, 1024, 512, 256, 1},
+            {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+                    impl::op_kind::ReLU, impl::op_kind::Sigmoid});
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1);
+    // REQUIRE_CPU_ENGINE();
+    // impl::graph_t agraph(engine->kind());
+    // // compiler_utils::add_simpmlp_subgraph(&agraph, true, 1, 5,
+    // //         {479, 1024, 1024, 512, 256, 1},
+    // //         {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+    // //                 impl::op_kind::ReLU, impl::op_kind::Sigmoid});
+    // compiler_utils::add_mlp_subgraph(&agraph, true, 1, 2, {13, 512, 1}, {graph::op_kind::ReLU, graph::op_kind::ReLU});
+    // agraph.finalize();
+
+    // compile_execution_pipeline(agraph, 1);
+}
+
 TEST(GCGraphTest, BF16MLPCompileExecution_CPU) {
     REQUIRE_AMXBF16();
     REQUIRE_CPU_ENGINE();

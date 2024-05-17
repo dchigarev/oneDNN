@@ -39,7 +39,10 @@ add_subdirectory(utils)
 get_property(UNIT_TEST_DEPS GLOBAL PROPERTY GRAPH_UNIT_TEST_DEPS)
 get_property(LIB_DEPS GLOBAL PROPERTY DNNL_LIB_DEPS)
 
+set(MY_BIN test_me_pls)
+
 add_executable(${BINARY_NAME} ${COMMON_UNIT_TESTS} ${UNIT_TEST_DEPS} ${LIB_DEPS})
+# add_executable(${MY_BIN} "my_test.cpp" ${UNIT_TEST_DEPS} ${LIB_DEPS})
 
 # Set path to non exported headers
 include_directories_with_host_compiler(
@@ -67,6 +70,14 @@ target_link_libraries(${BINARY_NAME}
     ${STATIC_LIB_DEPS}
     ${SHARED_LIB_DEPS}
 )
+
+# target_link_libraries(${MY_BIN}
+#     dnnl_gtest
+#     ${EXTRA_SHARED_LIBS}
+#     ${EXTRA_STATIC_LIBS}
+#     ${STATIC_LIB_DEPS}
+#     ${SHARED_LIB_DEPS}
+# )
 
 get_property(test_suite_names GLOBAL PROPERTY GRAPH_UNIT_TEST_SUITES)
 get_property(test_filters GLOBAL PROPERTY GRAPH_UNIT_TEST_FILTERS)
