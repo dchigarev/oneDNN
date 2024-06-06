@@ -19,7 +19,6 @@
 #include <memory>
 #include <string>
 #include <runtime/target_machine.hpp>
-#include <common/utils.hpp>
 
 namespace dnnl {
 namespace impl {
@@ -42,13 +41,6 @@ enum class fusion_opt_level : int { lv0 = 0, lv1, lv2, lv3 };
 
 struct scflags_t {
     enum class brgemm_backend_t : int { dnnl = 0, max_num };
-
-    scflags_t() {
-        int level = getenv_int_user("FUSION_LEVEL", 3);
-        int opt_level = getenv_int_user("OPT_LEVEL", 3);
-        fusion_level_ = static_cast<fusion_opt_level>(level);
-        opt_level_ = static_cast<sc_opt_level>(opt_level);
-    }
 
     jit_kind jit_kind_ = jit_kind::cfake;
     sc_opt_level opt_level_ = sc_opt_level::lv3;
