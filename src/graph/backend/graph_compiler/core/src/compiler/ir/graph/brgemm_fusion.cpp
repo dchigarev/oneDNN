@@ -106,20 +106,24 @@ private:
 //      [m, n] + [m, 1]
 //      [m, n] + [m, 2n]
 static bool is_brgemm_valid_shape(const std::vector<expr> &extra_in_shape) {
+    std::cout << "is_brgem_valid_shape" << std::endl;
     if (extra_in_shape.size() < 2) { return false; }
     // brgemm not support [m, 1] broadcast.
     auto n = extra_in_shape[extra_in_shape.size() - 1];
     auto m = extra_in_shape[extra_in_shape.size() - 2];
     if (n.isa<constant>() && get_expr_as_int(n) == UINT64_C(1)
             && !(m.isa<constant>() && get_expr_as_int(m) == UINT64_C(1))) {
+        std::cout << "false" << std::endl;
         return false;
     }
     for (size_t i = 0; i < extra_in_shape.size() - 2; i++) {
         auto &shape = extra_in_shape[i];
         if (!(shape.isa<constant>() && get_expr_as_int(shape) == INT64_C(1))) {
+            std::cout << "false" << std::endl;
             return false;
         }
     }
+    std::cout << "true" << std::endl;
     return true;
 }
 
@@ -293,7 +297,9 @@ bool brgemm_fusion_register::can_register_brgemm_fusion(const stmt &body) {
     valid_brgemm_finder_t finder;
     finder(body);
     valid_brgemm_node_ = finder.get_valid_brgemm_node();
-    return valid_brgemm_node_.defined();
+    auto ret = valid_brgemm_node_.defined();
+    std::cout << "can_register_brgemm fusion: " << ret << std::endl;
+    return ret;
 }
 
 void brgemm_fusion_register::reset() {

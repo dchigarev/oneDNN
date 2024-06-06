@@ -52,6 +52,7 @@ std::shared_ptr<jit_function_t> jit_engine_t::get_entry_func(
     COMPILE_ASSERT(ir_mod->get_entry_func(),
             "Expecting an ir_module with entry function");
     auto jit_func = jm->get_function(ir_mod->get_entry_func()->name_);
+    std::cout << "entry func is: " << ir_mod->get_entry_func()->name_ << std::endl;
     if (jm->code_) { jit_func->inplace_pairs_ = jm->code_->inplace_pairs_; }
     return jit_func;
 }

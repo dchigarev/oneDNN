@@ -1874,6 +1874,10 @@ static bool try_merge_mixed_parti_parallel(mixed_parti_t *A, mixed_parti_t *B) {
                 stmt_attr_key::parallel_merge_loop_granularity, 1)
             != outermost_loop_append->attr().get_or_else(
                     stmt_attr_key::parallel_merge_loop_granularity, 1)) {
+        SC_MODULE_INFO << "Failed to merge, different granularity. Target: " 
+                       << outermost_loop_target->attr().get_or_else(stmt_attr_key::parallel_merge_loop_granularity, 1)
+                       << " | Append: " 
+                       << outermost_loop_append->attr().get_or_else(stmt_attr_key::parallel_merge_loop_granularity, 1);
         return false;
     }
 
@@ -2138,6 +2142,7 @@ static void try_align_parti_outer_loops(mixed_parti_t *A, mixed_parti_t *B) {
 // check brgemm pre-op fusion
 static bool try_merge_brgemm_and_preop_parti(mixed_parti_t *A, mixed_parti_t *B,
         const sc_op_ptr &joint_op = nullptr) {
+    std::cout << "try_merge_brgemm_and_preop_parti" << std::endl;
     if (!require_fusion_level(A->ctx_, fusion_opt_level::lv2)) return false;
     A = A->get_root(), B = B->get_root();
     if (A == B) return false;
@@ -2742,6 +2747,8 @@ public:
 
 void mixed_parti_t::try_split_outermost_loop_on_num_threads(
         int64_t num_groups) {
+    SC_MODULE_INFO << "Splitting outermost loop on num threads, BEFORE: " << this->func_;
+
     auto outer_loops = get_outer_loops();
     if (outer_loops.empty()) return;
     auto outermost_loop = outer_loops[0];
@@ -2791,6 +2798,7 @@ void mixed_parti_t::try_split_outermost_loop_on_num_threads(
         // append new anchor into parti
         append_fusion_anchor(std::make_shared<fusion_anchor_t>(s, new_fsmap));
     }
+    SC_MODULE_INFO << "Splitting outermost loop on num threads, AFTER: " << this->func_;
 }
 
 void mixed_parti_t::try_split_outermost_loop(int64_t block) const {

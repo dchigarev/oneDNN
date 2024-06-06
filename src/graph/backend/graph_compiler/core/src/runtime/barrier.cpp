@@ -22,6 +22,7 @@
 #include "trace.hpp"
 #include <runtime/microkernel/cpu/kernel_timer.hpp>
 #include <runtime/runtime.hpp>
+#include <iostream>
 
 #ifdef SC_KERNEL_PROFILE
 static void make_trace(int in_or_out, int count) {
@@ -42,6 +43,7 @@ extern "C" SC_API void sc_arrive_at_barrier(gc::runtime::barrier_t *b,
     make_trace(0, 0);
     auto cur_round = b->rounds_.load(std::memory_order_acquire);
     auto cnt = --b->pending_;
+    // std::cout << "cur round: " << cur_round << " " << "cnt: " << cnt << std::endl;
     assert(cnt >= 0);
     int count = 0;
     if (cnt == 0) {

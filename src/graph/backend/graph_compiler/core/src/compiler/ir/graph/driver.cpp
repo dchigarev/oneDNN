@@ -150,9 +150,9 @@ create_default_graph_flow(const context_ptr &ctx) {
             create_graph_pass("partial_reduce_replace", partial_reduce_replace,
                     {}, pass_type::post_tune, sc_opt_level::lv2, true));
     // fix-me(brgemm-fuse): recover the following when postop is fixed
-#if 0
+#if 1
     post_tune_passes.push_back(create_graph_pass("brgemm_fusion_transform",
-            brgemm_fusion_transform, {}, pass_type::post_tune, true));
+            brgemm_fusion_transform, {}, pass_type::post_tune, sc_opt_level::lv0, true));
 #endif
     post_tune_passes.push_back(
             create_graph_pass("const_folding", graph_constant_input_folding, {},

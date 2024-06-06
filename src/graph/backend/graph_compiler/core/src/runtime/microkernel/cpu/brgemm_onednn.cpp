@@ -818,6 +818,7 @@ SC_API void dnnl_brgemm_call(brgemm_kernel_info *brg_desc, const void *A,
         const void *B, void *C, int num, const void *top_pad,
         const void *bottom_pad, gc::runtime::stream_t *stream) {
     bool amx_exclusive = false;
+    // std::cout << "A: " << A << " B: " << B << " C: " << C << " num: " << num << std::endl;
     sc_make_timer(brg_desc, num);
     void *tmp_amx_tile_buf = get_amx_tile_buf(brg_desc, stream, amx_exclusive);
     if (top_pad || bottom_pad) {

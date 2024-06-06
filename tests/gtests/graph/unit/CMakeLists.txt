@@ -29,8 +29,12 @@ file(GLOB COMMON_UNIT_TESTS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
+# list(REMOVE_ITEM COMMON_UNIT_TESTS "/localdisk/dchigare/repos/oneDNN/tests/gtests/graph/unit/my_test.cpp")
+
 list(APPEND COMMON_UNIT_TESTS ${TEST_THREAD})
 list(APPEND COMMON_UNIT_TESTS ${TEST_ALLOCATOR})
+
+message(${COMMON_UNIT_TESTS})
 
 add_subdirectory(interface)
 add_subdirectory(backend)
@@ -42,7 +46,17 @@ get_property(LIB_DEPS GLOBAL PROPERTY DNNL_LIB_DEPS)
 set(MY_BIN test_me_pls)
 
 add_executable(${BINARY_NAME} ${COMMON_UNIT_TESTS} ${UNIT_TEST_DEPS} ${LIB_DEPS})
-# add_executable(${MY_BIN} "my_test.cpp" ${UNIT_TEST_DEPS} ${LIB_DEPS})
+# add_executable(${MY_BIN} ${CMAKE_CURRENT_SOURCE_DIR}/brgemm_ex/fp32_mlp_forward_pattern_100004.cpp ${LIB_DEPS})
+
+# include_directories_with_host_compiler(${MY_BIN}
+#     PRIVATE
+#     ${PROJECT_SOURCE_DIR}/tests/gtests/graph # gtest related headers
+#     ${PROJECT_SOURCE_DIR}/src/
+#     ${PROJECT_SOURCE_DIR}/src/graph/backend/graph_compiler/core/src # for context
+#     ${CMAKE_CURRENT_SOURCE_DIR}/core
+#     ${CMAKE_CURRENT_SOURCE_DIR}/core/reference
+#     ${PROJECT_SOURCE_DIR}/src/cpu/x64
+#     )
 
 # Set path to non exported headers
 include_directories_with_host_compiler(
@@ -72,7 +86,7 @@ target_link_libraries(${BINARY_NAME}
 )
 
 # target_link_libraries(${MY_BIN}
-#     dnnl_gtest
+#     # dnnl_gtest
 #     ${EXTRA_SHARED_LIBS}
 #     ${EXTRA_STATIC_LIBS}
 #     ${STATIC_LIB_DEPS}

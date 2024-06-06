@@ -62,4 +62,4 @@ set_property(GLOBAL APPEND PROPERTY GRAPH_UNIT_TEST_DEPS
     $<TARGET_OBJECTS:${OBJ_LIB}>)
 
 register_graph_test_suite("test_graph_unit_graph_compiler_cpu" 
-    "GCPatternTests.*:GCBackendApi.*:GCGraphTest.*:GCCore_*:GCTestSimple.*")
+    "GCPatternTests.*:GCBackendApi.*:GCGraphTest.*:GCCore_*:GCTestSimple.*:GCTestSimple2.*")

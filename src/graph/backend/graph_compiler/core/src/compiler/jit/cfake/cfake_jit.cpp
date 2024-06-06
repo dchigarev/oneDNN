@@ -155,6 +155,14 @@ std::shared_ptr<jit_module> cfake_jit::make_jit_module(
             discretionary_options.end());
 
     int exit_status;
+    std::cout << "compiling with:\n" << command << " | ";
+    for (auto &op : option) {
+        std::cout << op << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "press any key..." << std::endl;
+    int x;
+    std::cin >> x;
     bool success
             = utils::create_process_and_await(command, option, exit_status);
     void *compiled_module = nullptr;
@@ -234,6 +242,7 @@ std::shared_ptr<jit_module> cfake_jit::make_jit_module(
     c_generator_optional_out_t optional_dump {
             &dump_main_f, &dump_header_f, &dump_data_f};
     c_generator_optional_out_t *ptr_optional_dump = nullptr;
+    std::cout << "MAKING FAKE JIT: \'" << compiler_config.dump_gen_code_ << "\'" << std::endl;
     if (!compiler_config.dump_gen_code_.empty()) {
         std::string dump_path_base = compiler_config.dump_gen_code_ + '/';
         dump_path_base

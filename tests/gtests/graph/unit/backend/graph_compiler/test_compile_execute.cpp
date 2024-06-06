@@ -55,7 +55,7 @@ static void set_mlp_dynamic_parti_ltsrs(int64_t real_batch_size,
 static void compile_execution_pipeline(impl::graph_t &agraph,
         int expected_part_size,
         std::function<void(ltsr_vec &, ltsr_vec &)> dynamic_callback
-        = nullptr) {
+        = nullptr, bool measure_time=false, int num_runs=10, bool random_data=false) {
     auto &compiler_backend_ptr
             = impl::compiler_impl::compiler_backend_t::get_singleton();
     compiler_backend_ptr.get_partitions(agraph, impl::partition_policy::fusion);
@@ -97,6 +97,195 @@ static void compile_execution_pipeline(impl::graph_t &agraph,
         impl::engine_t &eng = *get_engine();
         ASSERT_EQ(p.compile(&cp, inputs, outputs, &eng), impl::status::success);
 
+        num_runs = measure_time ? num_runs : 1;
+        std::vector<int64_t> times;
+        // srand(time(NULL));
+        for (size_t rn = 0; rn < num_runs; rn++) {
+            std::vector<test_tensor> execution_inputs;
+            std::vector<test_tensor> execution_outputs;
+            partition_outputs.clear();
+            for (auto &lt : outputs) {
+                impl::logical_tensor_t compiled_output;
+                cp.query_logical_tensor(lt->id, &compiled_output);
+                partition_outputs.push_back(compiled_output);
+                assert(compiled_output.ndims > -1);
+            }
+            if (dynamic_callback) {
+                dynamic_callback(partition_inputs, partition_outputs);
+            }
+            for (auto &lt : partition_inputs) {
+                assert(lt.ndims > -1);
+                lt_info_map[lt.id] = lt;
+            }
+            for (auto &lt : partition_outputs) {
+                assert(lt.ndims > -1);
+                lt_info_map[lt.id] = lt;
+            }
+
+            for (auto &lt : partition_inputs) {
+                test_tensor placeholder(lt, &eng);
+                if (random_data) {
+                    float LO = 0.0f;
+                    float HI = 200.0f;
+                    float mean = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+                    float div = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+                    placeholder.fill<float>(mean, div);
+                }
+                execution_inputs.push_back(placeholder);
+            }
+            for (auto &lt : partition_outputs) {
+                test_tensor placeholder(lt, &eng);
+                execution_outputs.push_back(placeholder);
+            }
+
+            impl::stream_t &strm = *get_stream();
+            auto inp = test_tensor::to_graph_tensor(execution_inputs);
+            auto out = test_tensor::to_graph_tensor(execution_outputs);
+            auto start = std::chrono::high_resolution_clock::now();
+            auto status = cp.execute(&strm, inp, out);
+            strm.wait();
+            auto end = std::chrono::high_resolution_clock::now();
+            ASSERT_EQ(status, impl::status::success);
+            auto res = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            times.push_back(res);
+        }
+        if (measure_time) {
+            std::sort(times.begin(), times.end());
+            std::cout << "Min: " << times[0] << "mc | Median: " << times[times.size() / 2] 
+                      << "mc | 0.7%: " << times[times.size() * 0.7]
+                      << "mc | 0.8%: " << times[times.size() * 0.8] << "mc | 0.9%: " << times[times.size() * 0.9] 
+                      << "mc | Max: "  << times[times.size() - 1]  << "mc" << std::endl;
+        }
+    }
+}
+
+// test fp32 get partition + compile + execution of MHA graph
+TEST(GCGraphTest, FP32MHACompileExecution_CPU) {
+    REQUIRE_AVX512();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    compiler_utils::add_MHA_simple_subgraph(&agraph, false);
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1);
+}
+
+#include <dlfcn.h>
+#include "compiler/jit/symbol_resolver.hpp"
+#include "runtime/context.hpp"
+#include "runtime/managed_thread_pool.hpp"
+#include "common/utils.hpp"
+
+TEST(GCGraphTest, CompileMe) {
+    int fs = dnnl::impl::getenv_int_user("FS", 1);
+
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 256);
+    compiler_utils::add_int8_mlp_subgraph(&agraph, 128, 3, {13, 512, 256, 128},
+            {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+                    impl::op_kind::ReLU, impl::op_kind::Sigmoid});
+    agraph.finalize();
+
+    // compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+
+    auto &compiler_backend_ptr
+        = impl::compiler_impl::compiler_backend_t::get_singleton();
+    compiler_backend_ptr.get_partitions(agraph, impl::partition_policy::fusion);
+    auto partitions = agraph.get_partitions();
+    // ASSERT_EQ(partitions.size(), static_cast<size_t>(expected_part_size));
+    // if (dynamic_callback) { ASSERT_EQ(expected_part_size, 1); }
+    // TODO(yifei): generalize the logic here
+    // sort partitions to run forward first according to num ops
+    std::sort(partitions.begin(), partitions.end(),
+            [](std::shared_ptr<impl::partition_impl_t> a,
+                    std::shared_ptr<impl::partition_impl_t> b) {
+                return a->get_ops().size() < b->get_ops().size();
+            });
+
+    std::unordered_map<size_t, impl::logical_tensor_t> lt_info_map;
+
+    impl::partition_t p;
+    p.init(partitions[0]);
+    auto partition_inputs = p.get_inputs();
+    auto partition_outputs = p.get_outputs();
+
+    // replace partition inputs info if needed
+    for (size_t i = 0; i < partition_inputs.size(); ++i) {
+        if (lt_info_map.find(partition_inputs[i].id) != lt_info_map.end()) {
+            partition_inputs[i] = lt_info_map[partition_inputs[i].id];
+        }
+    }
+
+    std::vector<const impl::logical_tensor_t *> inputs;
+    std::vector<const impl::logical_tensor_t *> outputs;
+    for (auto &lt : partition_inputs) {
+        inputs.push_back(&lt);
+    }
+    for (auto &lt : partition_outputs) {
+        outputs.push_back(&lt);
+    }
+    impl::compiled_partition_t cp(p);
+    impl::engine_t &eng = *get_engine();
+    ASSERT_EQ(p.compile(&cp, inputs, outputs, &eng), impl::status::success);
+
+    // num_runs = measure_time ? num_runs : 1;
+    // std::vector<int64_t> times;
+    // srand(time(NULL));
+    bool random_data = true;
+    // for (size_t rn = 0; rn < num_runs; rn++) {
+
+    // }
+
+    std::string outpath;
+
+    if (fs == 1) {
+        outpath = "/localdisk/dchigare/repos/oneDNN/build/dumps/to_compile/fused_mlp.so";
+    } else if (fs == 0) {
+        outpath = "/localdisk/dchigare/repos/oneDNN/build/dumps/to_compile/seq_mlp.so";
+    } else if (fs == 2) {
+        outpath = "/localdisk/dchigare/repos/oneDNN/build/dumps/to_compile/mal_seq_mlp.so";
+    }
+    auto run_func = "int8_mlp_pattern_100004_0wrapper";
+    std::cout << "opening: " << outpath << std::endl;
+
+    void *compiled_module = dlopen(outpath.data(), RTLD_LAZY);
+    if (!compiled_module) {
+        std::ostringstream os;
+        os << "dlopen: " << dlerror();
+        throw std::runtime_error(os.str());
+    }
+    for (auto &kv : dnnl::impl::graph::gc::get_runtime_function_map()) {
+        void **ptr = reinterpret_cast<void **>(
+                dlsym(compiled_module, (kv.first + "_fptr").c_str()));
+        if (ptr) { *ptr = kv.second; }
+    }
+    typedef void (*init_func_t)(void *ctx, void *mod);
+    auto deleter = [](char* p) { delete[] p; };
+
+    // Allocate 512KB of memory and wrap it in a shared pointer with the custom deleter
+    std::shared_ptr<char> memory(new char[8192 * 1024], deleter);
+    auto init_func = reinterpret_cast<init_func_t>(
+            dlsym(compiled_module, "__sc_init__"));
+    if (init_func) { init_func(nullptr, memory.get()); }
+
+    auto stream = dnnl::impl::graph::gc::runtime::get_default_stream();
+    using generic_val = dnnl::impl::graph::gc::generic_val;
+    typedef void (*main_func_t)(void* __stream, int8_t* __restrict__ __module_data, generic_val* __restrict__ args);
+    auto func = reinterpret_cast<main_func_t>(dlsym(compiled_module, run_func));
+
+//  * @param logical_tensor_4 [f32 [256, 32, 768, 64] @ ABCD]
+//  * @param logical_tensor_0 [f32 [256, 32, 768, 64] @ ABCD]
+//  * @param logical_tensor_1 [f32 [256, 32, 64, 768] @ ABCD]
+//  * @param logical_tensor_3 [f32 [256, 32, 768, 64] @ ABCD]
+
+    auto lt4_sz = 8192 * 8192;
+    auto lt0_sz = 8192 * 8192;
+    auto lt1_sz = 8192 * 8192;
+    auto lt3_sz = 8192 * 8192;
+    int num_runs = 100;
+    std::vector<int64_t> times;
+    for (int i=0; i<num_runs; i++) {
         std::vector<test_tensor> execution_inputs;
         std::vector<test_tensor> execution_outputs;
         partition_outputs.clear();
@@ -106,9 +295,6 @@ static void compile_execution_pipeline(impl::graph_t &agraph,
             partition_outputs.push_back(compiled_output);
             assert(compiled_output.ndims > -1);
         }
-        if (dynamic_callback) {
-            dynamic_callback(partition_inputs, partition_outputs);
-        }
         for (auto &lt : partition_inputs) {
             assert(lt.ndims > -1);
             lt_info_map[lt.id] = lt;
@@ -120,31 +306,71 @@ static void compile_execution_pipeline(impl::graph_t &agraph,
 
         for (auto &lt : partition_inputs) {
             test_tensor placeholder(lt, &eng);
+            if (random_data) {
+                float LO = 0.0f;
+                float HI = 200.0f;
+                float mean = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+                float div = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+                placeholder.fill<float>(mean, div);
+            }
             execution_inputs.push_back(placeholder);
         }
         for (auto &lt : partition_outputs) {
             test_tensor placeholder(lt, &eng);
             execution_outputs.push_back(placeholder);
         }
+        auto inp = test_tensor::to_graph_tensor(execution_inputs);
+        auto out = test_tensor::to_graph_tensor(execution_outputs);
 
-        impl::stream_t &strm = *get_stream();
-        ASSERT_EQ(cp.execute(&strm,
-                          test_tensor::to_graph_tensor(execution_inputs),
-                          test_tensor::to_graph_tensor(execution_outputs)),
-                impl::status::success);
-        strm.wait();
+        auto args = new generic_val[inp.size() + out.size()];
+        int idx = 0;
+        for (auto& o : out) {
+            args[idx].v_ptr = o.get_data_handle();
+            idx++;
+        }
+        for (auto& in: inp) {
+            args[idx].v_ptr = in.get_data_handle();
+            idx++;
+        }
+        // args[0].v_ptr = lt4;
+        // args[1].v_ptr = lt0;
+        // args[2].v_ptr = lt1;
+        // args[3].v_ptr = lt3;
+        auto start = std::chrono::high_resolution_clock::now();
+
+        dnnl::impl::graph::gc::runtime::thread_manager::cur_mgr.run_main_function((dnnl::impl::graph::gc::runtime::thread_manager::main_func_t)func, (dnnl::impl::graph::gc::runtime::stream_t *)stream, memory.get(), args);
+
+        // stream->wait();
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto res = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        times.push_back(res);
+
+        delete[] args;
     }
-}
 
-// test fp32 get partition + compile + execution of MHA graph
-TEST(GCGraphTest, FP32MHACompileExecution_CPU) {
-    REQUIRE_AVX512();
-    REQUIRE_CPU_ENGINE();
-    impl::graph_t agraph(engine->kind());
-    compiler_utils::add_MHA_subgraph(&agraph, false);
-    agraph.finalize();
+    std::sort(times.begin(), times.end());
+    std::cout << "Min: " << times[0] << "mc | Median: " << times[times.size() / 2] 
+                << "mc | 0.7%: " << times[times.size() * 0.7]
+                << "mc | 0.8%: " << times[times.size() * 0.8] << "mc | 0.9%: " << times[times.size() * 0.9] 
+                << "mc | Max: "  << times[times.size() - 1]  << "mc" << std::endl;
 
-    compile_execution_pipeline(agraph, 1);
+    
+    auto print_n = [](int8_t* arr, int n, const char* name) {
+        std::cout << name << ": ";
+        for (int i = 0; i < n; i++) {
+            std::cout << static_cast<int>(arr[i]) << " ";
+        }
+        std::cout << std::endl;
+    };
+
+    int sz = dnnl::impl::getenv_int_user("PR_TEST", 5);
+
+    // print_n(lt4, sz, "lt4");
+    // print_n(lt0, sz, "lt0");
+    // print_n(lt1, sz, "lt1");
+    // print_n(lt3, sz, "lt3");
+
 }
 
 TEST(GCGraphTest, FP32MHACompileExecution2_CPU) {
@@ -547,27 +773,109 @@ TEST(GCGraphTest, INT8MLPCompileExecution_CPU) {
     compile_execution_pipeline(agraph, 1);
 }
 
+// TEST(GCTestSimple, MyTest) {
+//     // REQUIRE_AMXBF16();
+//     REQUIRE_CPU_ENGINE();
+//     impl::graph_t agraph(engine->kind());
+//     compiler_utils::add_mlp_subgraph(&agraph, true, 1, 5,
+//             {479, 1024, 1024, 512, 256, 1},
+//             {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+//                     impl::op_kind::ReLU, impl::op_kind::Sigmoid});
+//     agraph.finalize();
+
+//     compile_execution_pipeline(agraph, 1);
+//     // REQUIRE_CPU_ENGINE();
+//     // impl::graph_t agraph(engine->kind());
+//     // // compiler_utils::add_simpmlp_subgraph(&agraph, true, 1, 5,
+//     // //         {479, 1024, 1024, 512, 256, 1},
+//     // //         {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+//     // //                 impl::op_kind::ReLU, impl::op_kind::Sigmoid});
+//     // compiler_utils::add_mlp_subgraph(&agraph, true, 1, 2, {13, 512, 1}, {graph::op_kind::ReLU, graph::op_kind::ReLU});
+//     // agraph.finalize();
+
+//     // compile_execution_pipeline(agraph, 1);
+// }
+
+// test bf16 get partition + compile + execution of MHA graph
 TEST(GCTestSimple, MyTest) {
-    // REQUIRE_AMXBF16();
+    REQUIRE_BF16_AMXBF16();
     REQUIRE_CPU_ENGINE();
     impl::graph_t agraph(engine->kind());
-    compiler_utils::add_mlp_subgraph(&agraph, true, 1, 5,
-            {479, 1024, 1024, 512, 256, 1},
+    int64_t size = dnnl::impl::getenv_int_user("PR_TEST", 4096);
+    // int64_t size = 1024;
+    // compiler_utils::add_simple_mlp_subgraph(&agraph, false, size, 2, {size, size, size});
+    compiler_utils::add_simple_mlp_subgraph(&agraph, true, size, 2, {size, size, size}, {impl::op_kind::Wildcard, impl::op_kind::Wildcard, impl::op_kind::Wildcard});
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+}
+
+TEST(GCTestSimple00, MyTest) {
+    // REQUIRE_BF16_AMXBF16();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 256);
+    compiler_utils::add_simple_mats_subgraph(&agraph);
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+}
+
+TEST(GCTestSimple0, MyTest) {
+    // REQUIRE_BF16_AMXBF16();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 256);
+    compiler_utils::add_mlp_subgraph(&agraph, false, btc, 2, {btc, btc, btc},
+            {impl::op_kind::Wildcard, impl::op_kind::Wildcard, impl::op_kind::Wildcard});
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+}
+
+TEST(GCTestSimple2, MyTest) {
+    // REQUIRE_BF16_AMXBF16();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 256);
+    compiler_utils::add_int8_mlp_subgraph(&agraph, btc, 3, {13, 512, 256, 128},
             {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
                     impl::op_kind::ReLU, impl::op_kind::Sigmoid});
     agraph.finalize();
 
-    compile_execution_pipeline(agraph, 1);
-    // REQUIRE_CPU_ENGINE();
-    // impl::graph_t agraph(engine->kind());
-    // // compiler_utils::add_simpmlp_subgraph(&agraph, true, 1, 5,
-    // //         {479, 1024, 1024, 512, 256, 1},
-    // //         {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
-    // //                 impl::op_kind::ReLU, impl::op_kind::Sigmoid});
-    // compiler_utils::add_mlp_subgraph(&agraph, true, 1, 2, {13, 512, 1}, {graph::op_kind::ReLU, graph::op_kind::ReLU});
-    // agraph.finalize();
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+}
 
-    // compile_execution_pipeline(agraph, 1);
+TEST(GCTestSimple3, MLPSpeed) {
+    // REQUIRE_AMXBF16();
+    REQUIRE_CPU_ENGINE();
+    impl::graph_t agraph(engine->kind());
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 256);
+    compiler_utils::add_int8_mlp_subgraph(&agraph, /*batch_size=*/btc, /*num_layers=*/5,
+            {479, 1024, 1024, 512, 256, 1},
+            {impl::op_kind::ReLU, impl::op_kind::ReLU, impl::op_kind::ReLU,
+                    impl::op_kind::ReLU, impl::op_kind::Sigmoid}
+    );
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
+}
+
+TEST(GCTestSimple4, FP32MHACompileExecution2_CPU) {
+    REQUIRE_AVX512();
+    REQUIRE_CPU_ENGINE();
+    int64_t btc = dnnl::impl::getenv_int_user("BATCH_SZ", 128);
+    int64_t sql = dnnl::impl::getenv_int_user("SEQ_LEN", 128);
+    int64_t hdn = dnnl::impl::getenv_int_user("HEAD_N", 16);
+    int64_t hdd = dnnl::impl::getenv_int_user("HEAD_D", 1024);
+    int64_t dty = dnnl::impl::getenv_int_user("DTY", 1024);
+
+    impl::graph_t agraph(engine->kind());
+    compiler_utils::add_MHA_subgraph(&agraph, /*f16=*/dty == 0, /*int8=*/dty == 1, false, /*batch_size=*/btc,
+                                      /*seq_len=*/sql, /*num_head=*/hdn, /*head_dim=*/hdd);
+    agraph.finalize();
+
+    compile_execution_pipeline(agraph, 1, nullptr, true, 100, true);
 }
 
 TEST(GCGraphTest, BF16MLPCompileExecution_CPU) {

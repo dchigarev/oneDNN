@@ -71,6 +71,7 @@ bool static_fusion_cost_model_t::make_decision_for_parti(
         const mixed_parti_t *parti, size_t merged_loop_size,
         parti_merge_kind merge_kind) {
     // query if turn on
+    std::cout << "making decision for part" << std::endl;
     if (!enable_) return true;
     /* loop_parallelism */
     auto ths_outer_loop = binded_mxp_->get_outer_loops();
@@ -90,6 +91,7 @@ bool static_fusion_cost_model_t::make_decision_for_parti(
     // in avoid of loss for loop optimize opportunity
     if (binded_mxp_->can_optimize_outer_loop(true)
             ^ parti->can_optimize_outer_loop(true)) {
+        std::cout << false << std::endl;
         return false;
     }
 
@@ -114,6 +116,7 @@ bool static_fusion_cost_model_t::make_decision_for_parti(
                            << binded_mxp_->func_->name_ << " and "
                            << parti->func_->name_
                            << " from perspective of loop parallelism";
+            std::cout << false << std::endl;
             return false;
         }
     }
@@ -137,6 +140,7 @@ bool static_fusion_cost_model_t::make_decision_for_parti(
                        << binded_mxp_->func_->name_ << " and "
                        << parti->func_->name_
                        << " from perspective of cache efficiency";
+        std::cout << false << std::endl;
         return false;
     } else {
         return true;

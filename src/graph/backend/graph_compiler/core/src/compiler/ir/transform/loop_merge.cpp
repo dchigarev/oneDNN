@@ -48,6 +48,7 @@ class loop_merger_impl_t : public ir_visitor_t {
             // if there is only one or less statement, no chance to merge
             return ir_visitor_t::visit(std::move(v));
         }
+        std::cout << "merging loop-merger" << std::endl;
         std::vector<stmt> newseq;
         newseq.reserve(v->seq_.size());
         bool changed = false;

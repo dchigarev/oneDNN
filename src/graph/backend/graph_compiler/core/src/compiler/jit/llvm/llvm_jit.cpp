@@ -189,9 +189,12 @@ std::shared_ptr<jit_module> llvm_jit::make_jit_module(
     auto new_mod = gen(module);
     ir_module_ptr copied_ir_module;
     auto &compiler_config = utils::compiler_configs_t::get();
+
+    std::cout << "MAKING LLVM JIT: \'" << compiler_config.dump_gen_code_ << "\'" << std::endl;
     if (!compiler_config.dump_gen_code_.empty()) {
         copied_ir_module = module->deep_copy();
     }
+
     auto timer = SC_SCOPED_TIMER_INFO("pass.time.llvm_jit", "");
     auto &attr_table = *new_mod->attr_.get<std::shared_ptr<statics_table_t>>(
             ir_module_t::attr_key_t::MODULE_DATA_BUFFERS);

@@ -21,6 +21,7 @@
 #include <runtime/generic_val.hpp>
 #include <runtime/threadpool_mode.hpp>
 #include <util/def.hpp>
+#include "common/utils.hpp"
 
 namespace dnnl {
 namespace impl {

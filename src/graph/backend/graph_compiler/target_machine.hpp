@@ -20,29 +20,24 @@
 #include "runtime/config.hpp"
 
 #define REQUIRE_AVX512_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512F) {
+    if (::dnnl::impl::graph::gc::get_default_context() \
+                    ->machine_.cpu_flags_.fAVX512F) {
 #define REQUIRE_VNNI_AMXINT8_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512VNNI \
-    //         || ::dnnl::impl::graph::gc::get_default_context() \
-    //                    ->machine_.cpu_flags_.fAVX512AMXINT8) {
+    if (::dnnl::impl::graph::gc::get_default_context() \
+                    ->machine_.cpu_flags_.fAVX512VNNI \
+            || ::dnnl::impl::graph::gc::get_default_context() \
+                       ->machine_.cpu_flags_.fAVX512AMXINT8) {
 #define REQUIRE_BF16_AMXBF16_BEGIN \
-    if (true) {
-    // if (::dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512BF16 \
-    //         || ::dnnl::impl::graph::gc::get_default_context() \
-    //                    ->machine_.cpu_flags_.fAVX512AMXBF16) {
+    if (::dnnl::impl::graph::gc::get_default_context() \
+                    ->machine_.cpu_flags_.fAVX512BF16 \
+            || ::dnnl::impl::graph::gc::get_default_context() \
+                       ->machine_.cpu_flags_.fAVX512AMXBF16) {
 #define REQUIRE_AMX_BEGIN \
-    if (true) {
-    // if (dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512AMXTILE) {
+    if (dnnl::impl::graph::gc::get_default_context() \
+                    ->machine_.cpu_flags_.fAVX512AMXTILE) {
 #define REQUIRE_AMXBF16_BEGIN \
-    if (true){
-    // if (dnnl::impl::graph::gc::get_default_context() \
-    //                 ->machine_.cpu_flags_.fAVX512AMXBF16) {
+    if (dnnl::impl::graph::gc::get_default_context() \
+                    ->machine_.cpu_flags_.fAVX512AMXBF16) {
 #define REQUIRE_AVX512_END }
 #define REQUIRE_VNNI_AMXINT8_END }
 #define REQUIRE_BF16_AMXBF16_END }
