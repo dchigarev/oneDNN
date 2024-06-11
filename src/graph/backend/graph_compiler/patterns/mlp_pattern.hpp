@@ -35,6 +35,42 @@ using FCreatePattern = graph::pass::FCreatePattern;
 #define MLP_NUM_LAYER_LOWER_BOUND 2
 #define MLP_NUM_LAYER_UPPER_BOUND 11
 
+// std::pair<pm::pb_node_t *, pm::pb_node_t *> independent_matmul(
+//         const std::shared_ptr<pb_graph_t> &pgraph, bool is_bf16 = false,
+//         bool is_int8 = false) {
+//     pm::pb_node_t *layer_input, *layer_output;
+//     in_edges_t matmul_in_edges;
+    
+//     auto matmul = pgraph->append_op(graph::op_kind::MatMul, matmul_in_edges);
+//     matmul->append_decision_function(is_bf16
+//                     ? check_input_dtype<graph::data_type::bf16>
+//                     : check_input_dtype<graph::data_type::f32>);
+//     matmul->allow_external_outputs();
+//     if (!is_int8) { layer_input = matmul; }
+
+//     /* optional add/biasAdd after matmul */
+//     auto add_subgraph = std::make_shared<pb_graph_t>();
+//     auto add = add_subgraph->append_alternation(
+//             {graph::op_kind::Add, graph::op_kind::BiasAdd});
+//     add->allow_external_outputs();
+//     add_subgraph->create_input_port(0, add, 0);
+//     add_subgraph->create_output_port(0, add, 0);
+//     auto optional_add
+//             = pgraph->append_optional(add_subgraph, {in_edge(0, matmul, 0)});
+
+//     /* optional activation */
+//     auto activation_subgraph = std::make_shared<pb_graph_t>();
+//     auto activation = activation_subgraph->append_alternation(
+//             {graph::op_kind::ReLU, graph::op_kind::Sigmoid});
+//     activation->allow_external_outputs();
+//     activation_subgraph->create_input_port(0, activation, 0);
+//     activation_subgraph->create_output_port(0, activation, 0);
+//     auto optional_activation = pgraph->append_optional(
+//             activation_subgraph, {in_edge(0, optional_add, 0)});
+//     layer_output = optional_activation;
+//     return std::make_pair(layer_input, layer_output);
+// }
+
 std::pair<pm::pb_node_t *, pm::pb_node_t *> single_layer_mlp(
         const std::shared_ptr<pb_graph_t> &pgraph, bool is_bf16 = false,
         bool is_int8 = false) {

@@ -246,57 +246,269 @@ TEST(GCCore_CPU_graph_mixed_partition_cpp, TestGraphBatchWiseFuse) {
     EXPECT_EQ(ss.str(), expected_str);
 }
 
-TEST(GCCore_CPU_graph_mixed_partition_cpp, TestGraphHorizontalMerge) {
-    SET_THREADS_OR_SKIP(32);
+#include "compiler/jit/compiler_driver.hpp"
+#include "test_utils_arr_fill.hpp"
+
+TEST(GCCore_CPU_graph_mixed_partition_cpp, Matmul3t) {
+    // SET_THREADS_OR_SKIP(32);
 
     sc_graph_t graph;
-    int M = 384, K = 1024, N = 1024;
+    int64_t M = dnnl::impl::getenv_int_user("M", 4096);
+    int64_t K = dnnl::impl::getenv_int_user("K", 4096);
+    int64_t N = dnnl::impl::getenv_int_user("N", 4096);
+    auto input = graph.make_input({graph_tensor::make({M, K})});
+    auto weight0 = graph.make_input({graph_tensor::make({K, N})});
+    auto weight1 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight2 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight3 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight4 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight5 = graph.make_input({graph_tensor::make({K, N})});
+
+    auto matmul0 = graph.make("matmul",
+            {input->get_outputs()[0], weight0->get_outputs()[0]}, {}, {});
+    auto matmul1 = graph.make("matmul",
+            {input->get_outputs()[0], weight1->get_outputs()[0]}, {}, {});
+    // auto matmul2 = graph.make("matmul",
+    //         {input->get_outputs()[0], weight2->get_outputs()[0]}, {}, {});
+    // auto matmul3 = graph.make("matmul",
+    //         {input->get_outputs()[0], weight3->get_outputs()[0]}, {}, {});
+    // auto matmul4 = graph.make("matmul",
+    //         {input->get_outputs()[0], weight4->get_outputs()[0]}, {}, {});
+    // auto matmul5 = graph.make("matmul",
+    //         {input->get_outputs()[0], weight5->get_outputs()[0]}, {}, {});
+    auto output0 = graph.make_output(matmul0->get_outputs());
+    auto output1 = graph.make_output(matmul1->get_outputs());
+    // auto output2 = graph.make_output(matmul2->get_outputs());
+    // auto output3 = graph.make_output(matmul3->get_outputs());
+    // auto output4 = graph.make_output(matmul4->get_outputs());
+    // auto output5 = graph.make_output(matmul5->get_outputs());
+    auto ctx = get_default_context();
+    // auto ctx = get_test_ctx();
+    graph.attrs_["temp.name"] = std::string("independent_matmul") + std::string("_") + std::to_string(2000);
+    // graph.attrs_[sc_graph_t::attr_key_t::fpmath_mode]
+    //         = static_cast<int>(fpmath_mode_);
+    graph.attrs_[sc_graph_t::attr_key_t::allow_channel_last_output]= true;
+
+    auto inp = graph.get_input_ops();
+    auto out = graph.get_output_ops();
+    std::vector<sc_op_ptr> args;
+    for (auto &ptr : out) {
+        args.push_back(ptr);
+    }
+    for (auto &ptr : inp) {
+        args.push_back(ptr);
+    }
+
+    std::shared_ptr<jit_function_t> fptr
+            = compiler_driver(ctx, graph, args);
+    int nruns = dnnl::impl::getenv_int_user("NRUNS", 100);
+    std::vector<int64_t> times;
+
+    for (int j=0; j<nruns; j++) {
+        std::vector<test_buffer<float>> outp;
+        std::vector<test_buffer<float>> inps;
+
+        for (auto &ptr : out) {
+            for (auto & ou : ptr->get_inputs()) {
+                int mult = 1;
+                for (auto i : ou->details_.get_blocking_dims()) {
+                    mult *= i;
+                }
+                // std::cout << "allocating out: " << mult << std::endl;
+                auto bf = ::alloc_array<float>(mult);
+                outp.emplace_back(std::move(bf));
+            }
+        }
+
+        for (auto &ptr : inp) {
+            for (auto & ou : ptr->get_outputs()) {
+                int mult = 1;
+                for (auto i : ou->details_.get_blocking_dims()) {
+                    mult *= i;
+                }
+                // std::cout << "allocating in: " << mult << std::endl;
+                auto bf = ::alloc_array<float>(mult);
+                inps.emplace_back(std::move(bf));
+            }
+        }
+
+        std::vector<generic_val> gargs;
+        for (auto &o : outp) {
+            gargs.emplace_back((void*)o.data());
+        }
+        for (auto &o : inps) {
+            gargs.emplace_back((void*)o.data());
+        }
+        auto str = runtime::get_default_stream();
+        auto dt = gargs.data();
+        auto start = std::chrono::high_resolution_clock::now();
+
+        fptr->call_generic(str, dt);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto res = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        times.push_back(res);
+    }
+
+    std::sort(times.begin(), times.end());
+    std::cout << "Min: " << times[0] << "mc | Median: " << times[times.size() / 2] 
+                << "mc | 0.7%: " << times[times.size() * 0.7]
+                << "mc | 0.8%: " << times[times.size() * 0.8] << "mc | 0.9%: " << times[times.size() * 0.9] 
+                << "mc | Max: "  << times[times.size() - 1]  << "mc" << std::endl;
+}
+
+TEST(GCCore_CPU_graph_mixed_partition_cpp, Matmul6t) {
+    // SET_THREADS_OR_SKIP(32);
+
+    sc_graph_t graph;
+    int64_t M = dnnl::impl::getenv_int_user("M", 4096);
+    int64_t K = dnnl::impl::getenv_int_user("K", 4096);
+    int64_t N = dnnl::impl::getenv_int_user("N", 4096);
     auto input = graph.make_input({graph_tensor::make({M, K})});
     auto weight0 = graph.make_input({graph_tensor::make({K, N})});
     auto weight1 = graph.make_input({graph_tensor::make({K, N})});
     auto weight2 = graph.make_input({graph_tensor::make({K, N})});
     auto weight3 = graph.make_input({graph_tensor::make({K, N})});
     auto weight4 = graph.make_input({graph_tensor::make({K, N})});
+    auto weight5 = graph.make_input({graph_tensor::make({K, N})});
 
-    auto matmul0 = graph.make("matmul_core",
+    auto matmul0 = graph.make("matmul",
             {input->get_outputs()[0], weight0->get_outputs()[0]}, {}, {});
-    auto matmul1 = graph.make("matmul_core",
+    auto matmul1 = graph.make("matmul",
             {input->get_outputs()[0], weight1->get_outputs()[0]}, {}, {});
-    auto matmul2 = graph.make("matmul_core",
+    auto matmul2 = graph.make("matmul",
             {input->get_outputs()[0], weight2->get_outputs()[0]}, {}, {});
-    auto matmul3 = graph.make("matmul_core",
+    auto matmul3 = graph.make("matmul",
             {input->get_outputs()[0], weight3->get_outputs()[0]}, {}, {});
-    auto matmul4 = graph.make("matmul_core",
+    auto matmul4 = graph.make("matmul",
             {input->get_outputs()[0], weight4->get_outputs()[0]}, {}, {});
+    auto matmul5 = graph.make("matmul",
+            {input->get_outputs()[0], weight5->get_outputs()[0]}, {}, {});
     auto output0 = graph.make_output(matmul0->get_outputs());
     auto output1 = graph.make_output(matmul1->get_outputs());
     auto output2 = graph.make_output(matmul2->get_outputs());
     auto output3 = graph.make_output(matmul3->get_outputs());
     auto output4 = graph.make_output(matmul4->get_outputs());
-    auto ctx = get_test_ctx();
+    auto output5 = graph.make_output(matmul5->get_outputs());
+    auto ctx = get_default_context();
+    // auto ctx = get_test_ctx();
+    graph.attrs_["temp.name"] = std::string("independent_matmul") + std::string("_") + std::to_string(2000);
+    // graph.attrs_[sc_graph_t::attr_key_t::fpmath_mode]
+    //         = static_cast<int>(fpmath_mode_);
+    graph.attrs_[sc_graph_t::attr_key_t::allow_channel_last_output]= true;
 
-    graph_driver_before_fusion(graph, ctx);
-    ops::matmul_core_config_t cfg = {32, 32, 32};
-    for (auto &op : graph.ops_) {
-        if (op->op_name_ == "matmul_core") {
-            auto matmul_op = op->dyn_cast<ops::matmul_core_op_t>();
-            matmul_op->set_config(reflection::general_object_t::make(cfg));
-        }
+    auto inp = graph.get_input_ops();
+    auto out = graph.get_output_ops();
+    std::vector<sc_op_ptr> args;
+    for (auto &ptr : out) {
+        args.push_back(ptr);
+    }
+    for (auto &ptr : inp) {
+        args.push_back(ptr);
     }
 
-    int M_num_block = M / cfg.M_block;
-    int N_num_block = N / cfg.N_block;
-    mixed_partition(graph, ctx);
-    std::stringstream ss;
-    print_graph(graph, ss, true);
-    std::string expected_str
-            = R"(graph(v0: f32[384, 1024], v1: f32[1024, 1024], v2: f32[1024, 1024], v3: f32[1024, 1024], v4: f32[1024, 1024], v5: f32[1024, 1024]) -> [v6: f32[384, 1024], v7: f32[384, 1024], v8: f32[384, 1024], v9: f32[384, 1024], v10: f32[384, 1024]] {
-  [v10: f32[384, 1024], v9: f32[384, 1024], v8: f32[384, 1024], v7: f32[384, 1024], v6: f32[384, 1024]] = outerloop_)"
-            + std::to_string(M_num_block * N_num_block * 5) +
-            R"(_partition_matmul_core_matmul_core_matmul_core_matmul_core_matmul_core(v0, v5, v4, v3, v2, v1)
+    std::shared_ptr<jit_function_t> fptr
+            = compiler_driver(ctx, graph, args);
+    int nruns = dnnl::impl::getenv_int_user("NRUNS", 100);
+    std::vector<int64_t> times;
+
+    for (int j=0; j<nruns; j++) {
+        std::vector<test_buffer<float>> outp;
+        std::vector<test_buffer<float>> inps;
+
+        for (auto &ptr : out) {
+            for (auto & ou : ptr->get_inputs()) {
+                int mult = 1;
+                for (auto i : ou->details_.get_blocking_dims()) {
+                    mult *= i;
+                }
+                // std::cout << "allocating out: " << mult << std::endl;
+                auto bf = ::alloc_array<float>(mult);
+                outp.emplace_back(std::move(bf));
+            }
+        }
+
+        for (auto &ptr : inp) {
+            for (auto & ou : ptr->get_outputs()) {
+                int mult = 1;
+                for (auto i : ou->details_.get_blocking_dims()) {
+                    mult *= i;
+                }
+                // std::cout << "allocating in: " << mult << std::endl;
+                auto bf = ::alloc_array<float>(mult);
+                inps.emplace_back(std::move(bf));
+            }
+        }
+
+        std::vector<generic_val> gargs;
+        for (auto &o : outp) {
+            gargs.emplace_back((void*)o.data());
+        }
+        for (auto &o : inps) {
+            gargs.emplace_back((void*)o.data());
+        }
+        auto str = runtime::get_default_stream();
+        auto dt = gargs.data();
+        auto start = std::chrono::high_resolution_clock::now();
+
+        fptr->call_generic(str, dt);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto res = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        times.push_back(res);
+    }
+
+    std::sort(times.begin(), times.end());
+    std::cout << "Min: " << times[0] << "mc | Median: " << times[times.size() / 2] 
+                << "mc | 0.7%: " << times[times.size() * 0.7]
+                << "mc | 0.8%: " << times[times.size() * 0.8] << "mc | 0.9%: " << times[times.size() * 0.9] 
+                << "mc | Max: "  << times[times.size() - 1]  << "mc" << std::endl;
 }
-)";
-    EXPECT_EQ(ss.str(), expected_str);
+
+TEST(GCCore_CPU_graph_mixed_partition_cpp, Matmul) {
+    // SET_THREADS_OR_SKIP(32);
+
+    sc_graph_t graph;
+    int64_t M = dnnl::impl::getenv_int_user("M", 4096);
+    int64_t K = dnnl::impl::getenv_int_user("K", 4096);
+    int64_t N = dnnl::impl::getenv_int_user("N", 4096);
+    auto input = graph.make_input({graph_tensor::make({M, K})});
+    auto weight0 = graph.make_input({graph_tensor::make({K, N})});
+    auto weight1 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight2 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight3 = graph.make_input({graph_tensor::make({K, N})});
+    // auto weight4 = graph.make_input({graph_tensor::make({K, N})});
+
+    auto matmul0 = graph.make("matmul",
+            {input->get_outputs()[0], weight0->get_outputs()[0]}, {}, {});
+    // auto output0 = graph.make_output(matmul0->get_outputs());
+
+
+    auto matmul1 = graph.make("matmul",
+            {matmul0->get_outputs()[0], weight1->get_outputs()[0]}, {}, {});
+    auto output1 = graph.make_output(matmul1->get_outputs());
+
+
+    graph.attrs_["temp.name"] = std::string("my_matmul") + std::string("_") + std::to_string(2000);
+    // graph.attrs_[sc_graph_t::attr_key_t::fpmath_mode]
+    //         = static_cast<int>(fpmath_mode_);
+    graph.attrs_[sc_graph_t::attr_key_t::allow_channel_last_output]= true;
+    auto ctx = get_default_context();
+    // auto ctx = get_test_ctx();
+
+    auto inp = graph.get_input_ops();
+    auto out = graph.get_output_ops();
+    std::vector<sc_op_ptr> args;
+    for (auto &ptr : out) {
+        args.push_back(ptr);
+    }
+    for (auto &ptr : inp) {
+        args.push_back(ptr);
+    }
+
+    std::shared_ptr<jit_function_t> fptr
+            = compiler_driver(ctx, graph, args);
+
 }
 
 TEST(GCCore_CPU_graph_mixed_partition_cpp, TestGraphRunSingleThreads) {

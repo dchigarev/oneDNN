@@ -136,7 +136,7 @@ sequential_module_pass_t get_default_precodegen_passes(
     ret.emplace_back(module_function_pass_t::make<ir_simplifier_t>(true));
     ret.emplace_back(module_function_pass_t::make<loop_splitter_t>());
 
-    ret.emplace_back(utils::make_unique<parallel_merge_t>());
+    if (dnnl::impl::getenv_int_user("USE_PM", 1)) ret.emplace_back(utils::make_unique<parallel_merge_t>());
     ret.emplace_back(utils::make_unique<dead_func_eliminate_t>());
     ret.emplace_back(module_function_pass_t::make<bf16_fp16_eliminator_t>(ctx));
     ret.emplace_back(utils::make_unique<target_specific_lowering_cpu_t>(ctx));

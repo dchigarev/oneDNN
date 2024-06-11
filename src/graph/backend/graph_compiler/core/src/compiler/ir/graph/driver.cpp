@@ -150,7 +150,7 @@ create_default_graph_flow(const context_ptr &ctx) {
             create_graph_pass("partial_reduce_replace", partial_reduce_replace,
                     {}, pass_type::post_tune, sc_opt_level::lv2, true));
     // fix-me(brgemm-fuse): recover the following when postop is fixed
-#if 1
+#if 0
     post_tune_passes.push_back(create_graph_pass("brgemm_fusion_transform",
             brgemm_fusion_transform, {}, pass_type::post_tune, sc_opt_level::lv0, true));
 #endif
